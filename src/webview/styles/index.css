@@ -1,0 +1,130 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --cp-bg: var(--vscode-editor-background, #1e1e1e);
+  --cp-surface: var(--vscode-sideBar-background, #252526);
+  --cp-border: var(--vscode-panel-border, #3e3e42);
+  --cp-text: var(--vscode-editor-foreground, #cccccc);
+  --cp-text-muted: var(--vscode-descriptionForeground, #858585);
+  --cp-primary: var(--vscode-button-background, #0e639c);
+  --cp-primary-hover: var(--vscode-button-hoverBackground, #1177bb);
+  --cp-primary-fg: var(--vscode-button-foreground, #ffffff);
+  --cp-input-bg: var(--vscode-input-background, #3c3c3c);
+  --cp-input-border: var(--vscode-input-border, #3e3e42);
+  --cp-list-hover: var(--vscode-list-hoverBackground, #2a2d2e);
+  --cp-list-active: var(--vscode-list-activeSelectionBackground, #094771);
+  --cp-list-active-fg: var(--vscode-list-activeSelectionForeground, #ffffff);
+  --cp-badge-bg: var(--vscode-badge-background, #4d4d4d);
+  --cp-badge-fg: var(--vscode-badge-foreground, #ffffff);
+  --cp-success: var(--vscode-terminal-ansiGreen, #23d18b);
+  --cp-error: var(--vscode-errorForeground, #f14c4c);
+  --cp-focus: var(--vscode-focusBorder, #007fd4);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--cp-bg);
+  color: var(--cp-text);
+  font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, sans-serif);
+  font-size: var(--vscode-font-size, 13px);
+  overflow: hidden;
+  height: 100vh;
+}
+
+#root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollbar styles matching VSCode */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--vscode-scrollbarSlider-background, rgba(121, 121, 121, 0.4));
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--vscode-scrollbarSlider-hoverBackground, rgba(100, 100, 100, 0.7));
+}
+
+/* Markdown content styling */
+.markdown-body {
+  color: var(--cp-text);
+  line-height: 1.6;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3 {
+  color: var(--vscode-editor-foreground, #cccccc);
+  border-bottom: 1px solid var(--cp-border);
+  padding-bottom: 0.3em;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-body h1 { font-size: 1.5em; }
+.markdown-body h2 { font-size: 1.25em; }
+.markdown-body h3 { font-size: 1.1em; }
+
+.markdown-body code {
+  background: var(--cp-input-bg);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-family: var(--vscode-editor-font-family, 'Courier New', monospace);
+  font-size: 0.9em;
+}
+
+.markdown-body pre {
+  background: var(--cp-input-bg);
+  padding: 1em;
+  border-radius: 4px;
+  overflow-x: auto;
+  border: 1px solid var(--cp-border);
+}
+
+.markdown-body pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 1.5em;
+}
+
+.markdown-body li {
+  margin: 0.25em 0;
+}
+
+.markdown-body strong {
+  color: var(--vscode-editor-foreground, #cccccc);
+}
+
+.markdown-body a {
+  color: var(--vscode-textLink-foreground, #3794ff);
+}
+
+.markdown-body a:hover {
+  color: var(--vscode-textLink-activeForeground, #3794ff);
+  text-decoration: underline;
+}
+
+.markdown-body blockquote {
+  border-left: 3px solid var(--cp-primary);
+  padding-left: 1em;
+  margin-left: 0;
+  color: var(--cp-text-muted);
+}

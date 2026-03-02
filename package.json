@@ -1,0 +1,101 @@
+{
+  "name": "code-patch",
+  "displayName": "Code Patch",
+  "description": "Unified skill manager for AI coding agents — sync skills across Claude Code, Codex, OpenCode, Cursor and more.",
+  "version": "0.2.0",
+  "publisher": "code-patch",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codePatch.openDashboard",
+        "title": "Code Patch: Open Dashboard",
+        "icon": {
+          "light": "media/icon.svg",
+          "dark": "media/icon.svg"
+        }
+      },
+      {
+        "command": "codePatch.syncSkill",
+        "title": "Code Patch: Sync Skill"
+      },
+      {
+        "command": "codePatch.refreshSkills",
+        "title": "Code Patch: Refresh Skills"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "codePatch.openDashboard",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Code Patch",
+      "properties": {
+        "codePatch.agents": {
+          "type": "object",
+          "description": "Per-agent configuration overrides. Key is agent name (e.g. 'claude-code'), value is an object with 'enabled' (boolean) and optional 'skillsDir' / 'globalSkillsDir' overrides.",
+          "default": {},
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "description": "Enable or disable management for this agent.",
+                "default": true
+              },
+              "skillsDir": {
+                "type": "string",
+                "description": "Override project-level skills directory (relative to workspace root)."
+              },
+              "globalSkillsDir": {
+                "type": "string",
+                "description": "Override global skills directory (absolute path, supports ${home} and ${configHome})."
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "npm run build:extension && npm run build:webview",
+    "build:extension": "tsc -p tsconfig.extension.json",
+    "build:webview": "vite build",
+    "dev:webview": "vite",
+    "watch:extension": "tsc -p tsconfig.extension.json --watch",
+    "lint": "eslint src/",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "@types/vscode": "^1.85.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.17",
+    "postcss": "^8.4.33",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.12"
+  },
+  "dependencies": {
+    "gray-matter": "^4.0.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-markdown": "^9.0.1",
+    "remark-gfm": "^4.0.0"
+  }
+}

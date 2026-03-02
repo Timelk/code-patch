@@ -1,0 +1,12 @@
+.vscode/**
+.vscode-test/**
+src/**
+node_modules/**
+.omc/**
+test/**
+*.png
+*.html
+vite.config.ts
+tsconfig*.json
+tailwind.config.cjs
+postcss.config.cjs

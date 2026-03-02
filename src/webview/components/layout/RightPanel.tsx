@@ -1,0 +1,152 @@
+import { type FC } from "react";
+import { AgentStatusBadge } from "../agent/AgentStatusBadge";
+import type { AgentInfo } from "../../hooks/useAgents";
+
+export interface SyncStats {
+  readonly totalSyncs: number;
+  readonly lastSyncTime: number | null;
+  readonly lastSyncAgentCount: number;
+  readonly lastSyncSkillName: string | null;
+}
+
+interface RightPanelProps {
+  readonly agents: readonly AgentInfo[];
+  readonly skillCount: number;
+  readonly syncStats: SyncStats;
+}
+
+function formatRelativeTime(timestamp: number): string {
+  const diff = Date.now() - timestamp;
+  const seconds = Math.floor(diff / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+export const RightPanel: FC<RightPanelProps> = ({ agents, skillCount, syncStats }) => {
+  const installedAgents = agents.filter((a) => a.installed);
+
+  return (
+    <aside
+      className="flex flex-col shrink-0 border-l h-full"
+      style={{
+        background: "var(--cp-surface)",
+        borderColor: "var(--cp-border)",
+      }}
+    >
+      {/* Stats Overview */}
+      <div className="p-3 border-b" style={{ borderColor: "var(--cp-border)" }}>
+        <h3
+          className="text-[10px] font-bold uppercase tracking-wider mb-2 px-1"
+          style={{ color: "var(--cp-text-muted)" }}
+        >
+          Overview
+        </h3>
+        <div className="grid grid-cols-2 gap-1.5">
+          <StatCard label="Skills" value={String(skillCount)} />
+          <StatCard label="Agents" value={String(installedAgents.length)} />
+          <StatCard label="Syncs" value={String(syncStats.totalSyncs)} />
+          <StatCard
+            label="Last Sync"
+            value={syncStats.lastSyncTime ? formatRelativeTime(syncStats.lastSyncTime) : "—"}
+          />
+        </div>
+        {syncStats.lastSyncSkillName && (
+          <div
+            className="mt-2 px-2 py-1.5 rounded text-[10px] border"
+            style={{
+              background: "var(--cp-bg)",
+              borderColor: "var(--cp-border)",
+              color: "var(--cp-text-muted)",
+            }}
+          >
+            Last: <span style={{ color: "var(--cp-text)" }}>{syncStats.lastSyncSkillName}</span>
+            {" → "}
+            {syncStats.lastSyncAgentCount} agent{syncStats.lastSyncAgentCount !== 1 ? "s" : ""}
+          </div>
+        )}
+      </div>
+
+      {/* Active Features */}
+      <div className="flex-1 overflow-y-auto p-3 border-b" style={{ borderColor: "var(--cp-border)" }}>
+        <h3
+          className="text-[10px] font-bold uppercase tracking-wider mb-2 px-1"
+          style={{ color: "var(--cp-text-muted)" }}
+        >
+          Active Features
+        </h3>
+        <div className="space-y-1.5">
+          <FeatureRow name="Context Awareness" description="Auto-includes imported file refs" active />
+          <FeatureRow name="Symlink Sync" description="Single source of truth via symlinks" active />
+          <FeatureRow name="File Watcher" description="Auto-refresh on SKILL.md changes" active />
+          <FeatureRow name="MCP Discovery" description="Scans agent MCP configurations" active />
+        </div>
+      </div>
+
+      {/* Detected Agents */}
+      <div className="p-3">
+        <h3
+          className="text-[10px] font-bold uppercase tracking-wider mb-2 px-1"
+          style={{ color: "var(--cp-text-muted)" }}
+        >
+          Detected Agents ({installedAgents.length})
+        </h3>
+        <div className="space-y-1">
+          {agents.map((agent) => (
+            <AgentStatusBadge key={agent.name} agent={agent} />
+          ))}
+        </div>
+      </div>
+    </aside>
+  );
+};
+
+const StatCard: FC<{ label: string; value: string }> = ({ label, value }) => (
+  <div
+    className="p-2 rounded border text-center"
+    style={{
+      background: "var(--cp-bg)",
+      borderColor: "var(--cp-border)",
+    }}
+  >
+    <div className="text-sm font-bold" style={{ color: "var(--cp-text)" }}>
+      {value}
+    </div>
+    <div className="text-[9px] uppercase tracking-wider mt-0.5" style={{ color: "var(--cp-text-muted)" }}>
+      {label}
+    </div>
+  </div>
+);
+
+const FeatureRow: FC<{ name: string; description: string; active: boolean }> = ({
+  name,
+  description,
+  active,
+}) => (
+  <div
+    className="p-2 rounded border transition-colors"
+    style={{
+      background: "var(--cp-bg)",
+      borderColor: "var(--cp-border)",
+      opacity: active ? 1 : 0.6,
+    }}
+  >
+    <div className="flex justify-between items-start">
+      <span className="text-xs font-medium" style={{ color: "var(--cp-text)" }}>
+        {name}
+      </span>
+      <span
+        className="w-1.5 h-1.5 rounded-full mt-1 shrink-0"
+        style={{
+          background: active ? "var(--cp-success)" : "var(--cp-text-muted)",
+        }}
+      />
+    </div>
+    <p className="text-[10px] mt-0.5 leading-tight" style={{ color: "var(--cp-text-muted)" }}>
+      {description}
+    </p>
+  </div>
+);
