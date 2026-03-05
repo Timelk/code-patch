@@ -36,7 +36,11 @@ export function onMessage<T = unknown>(
   handler: (message: T) => void
 ): () => void {
   const listener = (event: MessageEvent<T>) => {
-    handler(event.data);
+    try {
+      handler(event.data);
+    } catch (err) {
+      console.error("[code-patch] Error in message handler:", err);
+    }
   };
   window.addEventListener("message", listener);
   return () => window.removeEventListener("message", listener);

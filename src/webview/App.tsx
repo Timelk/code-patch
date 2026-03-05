@@ -103,6 +103,10 @@ export const App: FC = () => {
   // Pending sync from context menu — triggers sync dialog for a single skill
   const [pendingSyncSkill, setPendingSyncSkill] = useState<Skill | null>(null);
 
+  // Loading states for async operations
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isDiffLoading, setIsDiffLoading] = useState(false);
+
   // Notification timer ref to prevent premature clearing on rapid syncs
   const notificationTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -134,6 +138,7 @@ export const App: FC = () => {
           handleAgentsDetected(message.payload);
           break;
         case "sync:result": {
+          setIsSyncing(false);
           const report = message.payload;
           const successCount = report.results.filter((r) => r.success).length;
           const failCount = report.results.length - successCount;
@@ -171,6 +176,7 @@ export const App: FC = () => {
           setMcpLoading(false);
           break;
         case "diff:result":
+          setIsDiffLoading(false);
           setDiffReport(message.payload);
           break;
         case "history:loaded":
@@ -214,6 +220,7 @@ export const App: FC = () => {
 
   const handleSync = useCallback(
     (skillName: string, targetAgents: string[]) => {
+      setIsSyncing(true);
       postMessage({
         type: "sync:execute",
         payload: { skillName, targetAgents, scope },
@@ -224,6 +231,7 @@ export const App: FC = () => {
 
   const handleBatchSync = useCallback(
     (skillNames: string[], targetAgents: string[]) => {
+      setIsSyncing(true);
       postMessage({
         type: "sync:batch",
         payload: { skillNames, targetAgents, scope },
@@ -319,6 +327,7 @@ export const App: FC = () => {
   }, [scope]);
 
   const handleDiffRequest = useCallback((skillName: string) => {
+    setIsDiffLoading(true);
     postMessage({
       type: "diff:request",
       payload: { skillName },
@@ -396,6 +405,8 @@ export const App: FC = () => {
           selectedSkillNames={selectedSkillNames}
           agentsWithSkill={agentsWithSkill}
           onCheckAgentsForSync={handleCheckAgentsForSync}
+          isSyncing={isSyncing}
+          isDiffLoading={isDiffLoading}
         />
         <ResizeHandle onDrag={handleRightPanelResize} />
         <div style={{ width: rightPanelWidth, flexShrink: 0 }}>

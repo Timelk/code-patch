@@ -66,16 +66,19 @@ async function parseMcpConfig(
       (config["servers"] as Record<string, unknown>) ??
       {};
 
-    return Object.entries(servers).map(([name, value]) => {
+    return Object.entries(servers).flatMap(([name, value]) => {
+      if (!value || typeof value !== "object") return [];
       const srv = value as Record<string, unknown>;
-      return {
-        name,
-        command: (srv["command"] as string) ?? "unknown",
-        args: srv["args"] as string[] | undefined,
-        env: srv["env"] as Record<string, string> | undefined,
-        source,
-        sourcePath: resolvedPath,
-      };
+      const command = typeof srv["command"] === "string" ? srv["command"] : "unknown";
+      const args =
+        Array.isArray(srv["args"]) && srv["args"].every((a) => typeof a === "string")
+          ? (srv["args"] as string[])
+          : undefined;
+      const env =
+        srv["env"] && typeof srv["env"] === "object" && !Array.isArray(srv["env"])
+          ? (srv["env"] as Record<string, string>)
+          : undefined;
+      return [{ name, command, args, env, source, sourcePath: resolvedPath }];
     });
   } catch {
     return [];

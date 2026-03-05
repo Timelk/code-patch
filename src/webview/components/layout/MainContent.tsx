@@ -19,6 +19,8 @@ interface MainContentProps {
   readonly selectedSkillNames: ReadonlySet<string>;
   readonly agentsWithSkill: ReadonlySet<string>;
   readonly onCheckAgentsForSync: (skillName: string) => void;
+  readonly isSyncing?: boolean;
+  readonly isDiffLoading?: boolean;
 }
 
 export const MainContent: FC<MainContentProps> = ({
@@ -35,6 +37,8 @@ export const MainContent: FC<MainContentProps> = ({
   selectedSkillNames,
   agentsWithSkill,
   onCheckAgentsForSync,
+  isSyncing = false,
+  isDiffLoading = false,
 }) => {
   const [showSyncDialog, setShowSyncDialog] = useState(false);
 
@@ -58,24 +62,30 @@ export const MainContent: FC<MainContentProps> = ({
               style={{
                 background: (selectedSkill || hasBatchSelection) ? "var(--cp-primary)" : "var(--cp-badge-bg)",
                 color: (selectedSkill || hasBatchSelection) ? "var(--cp-primary-fg)" : "var(--cp-text-muted)",
-                cursor: (selectedSkill || hasBatchSelection) ? "pointer" : "default",
+                cursor: (selectedSkill || hasBatchSelection) && !isSyncing ? "pointer" : "default",
                 opacity: (selectedSkill || hasBatchSelection) ? 1 : 0.6,
               }}
               onClick={() => {
-              if (selectedSkill || hasBatchSelection) {
-                if (selectedSkill && !hasBatchSelection) {
-                  onCheckAgentsForSync(selectedSkill.name);
+                if ((selectedSkill || hasBatchSelection) && !isSyncing) {
+                  if (selectedSkill && !hasBatchSelection) {
+                    onCheckAgentsForSync(selectedSkill.name);
+                  }
+                  setShowSyncDialog(true);
                 }
-                setShowSyncDialog(true);
-              }
-            }}
-              disabled={!selectedSkill && !hasBatchSelection}
+              }}
+              disabled={(!selectedSkill && !hasBatchSelection) || isSyncing}
             >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M23 4v6h-6M1 20v-6h6" />
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-              </svg>
-              {hasBatchSelection ? `Sync (${selectedSkillNames.size})` : "Sync"}
+              {isSyncing ? (
+                <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+              ) : (
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M23 4v6h-6M1 20v-6h6" />
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                </svg>
+              )}
+              {isSyncing ? "Syncing..." : hasBatchSelection ? `Sync (${selectedSkillNames.size})` : "Sync"}
             </button>
 
             {showSyncDialog && (selectedSkill || hasBatchSelection) && (
@@ -101,20 +111,26 @@ export const MainContent: FC<MainContentProps> = ({
             className="flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors border"
             style={{
               borderColor: "var(--cp-border)",
-              color: selectedSkill ? "var(--cp-text-muted)" : "var(--cp-text-muted)",
-              opacity: selectedSkill ? 1 : 0.4,
-              cursor: selectedSkill ? "pointer" : "default",
+              color: "var(--cp-text-muted)",
+              opacity: selectedSkill && !isDiffLoading ? 1 : 0.4,
+              cursor: selectedSkill && !isDiffLoading ? "pointer" : "default",
             }}
-            onClick={() => selectedSkill && onDiffRequest(selectedSkill.name)}
-            disabled={!selectedSkill}
+            onClick={() => selectedSkill && !isDiffLoading && onDiffRequest(selectedSkill.name)}
+            disabled={!selectedSkill || isDiffLoading}
             title="Compare across agents"
           >
-            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="20" x2="18" y2="10" />
-              <line x1="12" y1="20" x2="12" y2="4" />
-              <line x1="6" y1="20" x2="6" y2="14" />
-            </svg>
-            Diff
+            {isDiffLoading ? (
+              <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+            ) : (
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="20" x2="18" y2="10" />
+                <line x1="12" y1="20" x2="12" y2="4" />
+                <line x1="6" y1="20" x2="6" y2="14" />
+              </svg>
+            )}
+            {isDiffLoading ? "Loading..." : "Diff"}
           </button>
 
           {/* History button */}

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { postMessage } from "../services/vscode-message";
 
 export interface Skill {
@@ -64,11 +64,15 @@ export function useSkills() {
     [scope, loadSkills]
   );
 
-  const filteredSkills = searchQuery
-    ? skills.filter((s) =>
-        s.name.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : skills;
+  const filteredSkills = useMemo(
+    () =>
+      searchQuery
+        ? skills.filter((s) =>
+            s.name.toLowerCase().includes(searchQuery.toLowerCase())
+          )
+        : skills,
+    [skills, searchQuery]
+  );
 
   return {
     skills: filteredSkills,

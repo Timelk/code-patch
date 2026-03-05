@@ -1,7 +1,11 @@
 import * as vscode from "vscode";
 import * as path from "path";
+import * as fs from "fs";
+import * as os from "os";
+import * as crypto from "crypto";
 import type { WebviewMessage, ExtensionMessage, Scope } from "../types/messages";
-import { detectAgents, findAgentsWithSkill } from "../services/agent-detector";
+import { detectAgents, findAgentsWithSkill, resolveSkillsDir } from "../services/agent-detector";
+import { AGENT_REGISTRY } from "../types/agent";
 import { scanSkills } from "../services/skill-scanner";
 import { syncSkill } from "../services/sync-engine";
 import { scanMcpServers } from "../services/mcp-scanner";
@@ -170,32 +174,41 @@ export class DashboardPanel {
       }
 
       case "skill:openInEditor": {
-        const uri = vscode.Uri.file(message.payload.path);
+        const filePath = message.payload.path;
+        // Validate the path is within an allowed root to prevent path traversal
+        const allowedRoots = [os.homedir(), ...(workspaceRoot ? [workspaceRoot] : [])];
+        const resolvedFilePath = path.resolve(filePath);
+        const isAllowed = allowedRoots.some((root) =>
+          resolvedFilePath.startsWith(path.resolve(root) + path.sep) ||
+          resolvedFilePath === path.resolve(root)
+        );
+        if (!isAllowed) {
+          console.error(`[code-patch] Blocked attempt to open file outside allowed roots: ${filePath}`);
+          break;
+        }
+        const uri = vscode.Uri.file(resolvedFilePath);
         await vscode.window.showTextDocument(uri);
         break;
       }
 
       case "skill:create": {
         // Determine target dir based on agent filter
-        const { resolveSkillsDir: resolveDir } = await import("../services/agent-detector");
-        const { AGENT_REGISTRY: agents } = await import("../types/agent");
         const agentName = message.payload.agentFilter;
         const targetAgent = agentName
-          ? agents.find((a: { name: string }) => a.name === agentName)
-          : agents.find((a: { name: string }) => a.name === "claude-code"); // default
+          ? AGENT_REGISTRY.find((a) => a.name === agentName)
+          : AGENT_REGISTRY.find((a) => a.name === "claude-code"); // default
         const baseDir = targetAgent
-          ? resolveDir(targetAgent, this.currentScope, workspaceRoot)
+          ? resolveSkillsDir(targetAgent, this.currentScope, workspaceRoot)
           : (workspaceRoot ? path.join(workspaceRoot, ".agents/skills") : null);
         const targetDir = baseDir
           ? path.join(baseDir, message.payload.name)
           : null;
         if (targetDir) {
-          const { mkdir, writeFile } = await import("fs/promises");
-          await mkdir(targetDir, { recursive: true });
+          await fs.promises.mkdir(targetDir, { recursive: true });
           const content =
             `---\nname: ${message.payload.name}\ndescription: ""\n---\n\n` +
             message.payload.content;
-          await writeFile(path.join(targetDir, "SKILL.md"), content, "utf-8");
+          await fs.promises.writeFile(path.join(targetDir, "SKILL.md"), content, "utf-8");
           const skills = await scanSkills(this.currentScope, workspaceRoot, agentName);
           this.postMessage({ type: "skills:loaded", payload: skills });
         } else {
@@ -302,11 +315,5 @@ export class DashboardPanel {
 }
 
 function getNonce(): string {
-  let text = "";
-  const possible =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  for (let i = 0; i < 32; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
+  return crypto.randomBytes(32).toString("hex");
 }

@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import * as crypto from "crypto";
 import type { AgentConfig } from "../types/agent";
 import type { SyncResult, SyncReport } from "../types/skill";
 import { AGENT_REGISTRY } from "../types/agent";
@@ -166,7 +167,7 @@ export async function syncSkill(
 
   // Snapshot the source content once to avoid race conditions
   // when multiple universal agents share the same directory
-  const snapshotDir = sourceDir + ".sync-snapshot-" + Date.now();
+  const snapshotDir = sourceDir + ".sync-snapshot-" + crypto.randomBytes(8).toString("hex");
   try {
     await copyDir(sourceDir, snapshotDir);
   } catch (err) {
