@@ -109,9 +109,16 @@ export const App: FC = () => {
 
   // Notification timer ref to prevent premature clearing on rapid syncs
   const notificationTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  // Safety timeouts: reset loading flags if the extension never responds (crash / disconnect)
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const diffTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
-  // Clean up notification timer on unmount
-  useEffect(() => () => clearTimeout(notificationTimerRef.current), []);
+  // Clean up all timers on unmount
+  useEffect(() => () => {
+    clearTimeout(notificationTimerRef.current);
+    clearTimeout(syncTimeoutRef.current);
+    clearTimeout(diffTimeoutRef.current);
+  }, []);
   const [agentsWithSkill, setAgentsWithSkill] = useState<Set<string>>(new Set());
 
   // Disable right-click globally (except sidebar handles it locally)
@@ -138,6 +145,7 @@ export const App: FC = () => {
           handleAgentsDetected(message.payload);
           break;
         case "sync:result": {
+          clearTimeout(syncTimeoutRef.current);
           setIsSyncing(false);
           const report = message.payload;
           const successCount = report.results.filter((r) => r.success).length;
@@ -176,6 +184,7 @@ export const App: FC = () => {
           setMcpLoading(false);
           break;
         case "diff:result":
+          clearTimeout(diffTimeoutRef.current);
           setIsDiffLoading(false);
           setDiffReport(message.payload);
           break;
@@ -221,6 +230,8 @@ export const App: FC = () => {
   const handleSync = useCallback(
     (skillName: string, targetAgents: string[]) => {
       setIsSyncing(true);
+      clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = setTimeout(() => setIsSyncing(false), 60_000);
       postMessage({
         type: "sync:execute",
         payload: { skillName, targetAgents, scope },
@@ -232,6 +243,8 @@ export const App: FC = () => {
   const handleBatchSync = useCallback(
     (skillNames: string[], targetAgents: string[]) => {
       setIsSyncing(true);
+      clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = setTimeout(() => setIsSyncing(false), 60_000);
       postMessage({
         type: "sync:batch",
         payload: { skillNames, targetAgents, scope },
@@ -328,6 +341,8 @@ export const App: FC = () => {
 
   const handleDiffRequest = useCallback((skillName: string) => {
     setIsDiffLoading(true);
+    clearTimeout(diffTimeoutRef.current);
+    diffTimeoutRef.current = setTimeout(() => setIsDiffLoading(false), 30_000);
     postMessage({
       type: "diff:request",
       payload: { skillName },

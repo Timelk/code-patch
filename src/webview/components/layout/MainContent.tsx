@@ -2,6 +2,7 @@ import { type FC, useState } from "react";
 import { SkillDetail } from "../skill/SkillDetail";
 import { SyncDialog } from "../skill/SyncDialog";
 import { SearchInput } from "../common/SearchInput";
+import { Spinner } from "../common/Spinner";
 import type { Skill } from "../../hooks/useSkills";
 import type { AgentInfo } from "../../hooks/useAgents";
 
@@ -19,8 +20,8 @@ interface MainContentProps {
   readonly selectedSkillNames: ReadonlySet<string>;
   readonly agentsWithSkill: ReadonlySet<string>;
   readonly onCheckAgentsForSync: (skillName: string) => void;
-  readonly isSyncing?: boolean;
-  readonly isDiffLoading?: boolean;
+  readonly isSyncing: boolean;
+  readonly isDiffLoading: boolean;
 }
 
 export const MainContent: FC<MainContentProps> = ({
@@ -37,8 +38,8 @@ export const MainContent: FC<MainContentProps> = ({
   selectedSkillNames,
   agentsWithSkill,
   onCheckAgentsForSync,
-  isSyncing = false,
-  isDiffLoading = false,
+  isSyncing,
+  isDiffLoading,
 }) => {
   const [showSyncDialog, setShowSyncDialog] = useState(false);
 
@@ -76,9 +77,7 @@ export const MainContent: FC<MainContentProps> = ({
               disabled={(!selectedSkill && !hasBatchSelection) || isSyncing}
             >
               {isSyncing ? (
-                <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                </svg>
+                <Spinner size="w-3.5 h-3.5" />
               ) : (
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M23 4v6h-6M1 20v-6h6" />
@@ -120,9 +119,7 @@ export const MainContent: FC<MainContentProps> = ({
             title="Compare across agents"
           >
             {isDiffLoading ? (
-              <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-              </svg>
+              <Spinner size="w-3 h-3" />
             ) : (
               <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="18" y1="20" x2="18" y2="10" />

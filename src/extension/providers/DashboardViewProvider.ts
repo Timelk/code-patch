@@ -23,6 +23,8 @@ export class DashboardPanel {
   private readonly panel: vscode.WebviewPanel;
   private readonly extensionUri: vscode.Uri;
   private readonly fileWatcher: SkillFileWatcher;
+  /** Resolved once at construction; used for path-traversal validation in skill:openInEditor. */
+  private readonly allowedRoots: readonly string[];
   private currentScope: Scope = "project";
   private currentAgentFilter: string | undefined = undefined;
   private disposed = false;
@@ -35,6 +37,10 @@ export class DashboardPanel {
     this.panel = panel;
     this.extensionUri = extensionUri;
     this.fileWatcher = fileWatcher;
+    this.allowedRoots = [
+      path.resolve(os.homedir()),
+      ...(vscode.workspace.workspaceFolders?.map((f) => path.resolve(f.uri.fsPath)) ?? []),
+    ];
 
     // Set webview HTML
     this.panel.webview.html = this.getHtmlForWebview(this.panel.webview);
@@ -175,19 +181,16 @@ export class DashboardPanel {
 
       case "skill:openInEditor": {
         const filePath = message.payload.path;
-        // Validate the path is within an allowed root to prevent path traversal
-        const allowedRoots = [os.homedir(), ...(workspaceRoot ? [workspaceRoot] : [])];
         const resolvedFilePath = path.resolve(filePath);
-        const isAllowed = allowedRoots.some((root) =>
-          resolvedFilePath.startsWith(path.resolve(root) + path.sep) ||
-          resolvedFilePath === path.resolve(root)
+        const isAllowed = this.allowedRoots.some((root) =>
+          resolvedFilePath.startsWith(root + path.sep) ||
+          resolvedFilePath === root
         );
         if (!isAllowed) {
           console.error(`[code-patch] Blocked attempt to open file outside allowed roots: ${filePath}`);
           break;
         }
-        const uri = vscode.Uri.file(resolvedFilePath);
-        await vscode.window.showTextDocument(uri);
+        await vscode.window.showTextDocument(vscode.Uri.file(resolvedFilePath));
         break;
       }
 
@@ -205,10 +208,9 @@ export class DashboardPanel {
           : null;
         if (targetDir) {
           await fs.promises.mkdir(targetDir, { recursive: true });
-          const content =
-            `---\nname: ${message.payload.name}\ndescription: ""\n---\n\n` +
-            message.payload.content;
-          await fs.promises.writeFile(path.join(targetDir, "SKILL.md"), content, "utf-8");
+          // message.payload.content is already the full file (frontmatter + body)
+          // as assembled by CreateSkillDialog — write it directly.
+          await fs.promises.writeFile(path.join(targetDir, "SKILL.md"), message.payload.content, "utf-8");
           const skills = await scanSkills(this.currentScope, workspaceRoot, agentName);
           this.postMessage({ type: "skills:loaded", payload: skills });
         } else {
