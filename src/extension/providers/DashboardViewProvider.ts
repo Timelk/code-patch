@@ -126,7 +126,7 @@ export class DashboardPanel {
         const report = await syncSkill(
           message.payload.skillName,
           message.payload.targetAgents,
-          this.currentScope,
+          message.payload.scope ?? this.currentScope,
           workspaceRoot
         );
         const successCount = report.results.filter((r) => r.success).length;
@@ -143,12 +143,13 @@ export class DashboardPanel {
       }
 
       case "sync:batch": {
+        const batchScope = message.payload.scope ?? this.currentScope;
         const batchResults = await Promise.all(
           message.payload.skillNames.map((skillName) =>
             syncSkill(
               skillName,
               message.payload.targetAgents,
-              this.currentScope,
+              batchScope,
               workspaceRoot
             )
           )
@@ -211,11 +212,12 @@ export class DashboardPanel {
           const skillDir = path.dirname(skillFilePath);
           try {
             await rm(skillDir, { recursive: true });
+            const updated = await scanSkills(this.currentScope, workspaceRoot, this.currentAgentFilter);
+            this.postMessage({ type: "skills:loaded", payload: updated });
           } catch (err) {
             console.error(`[code-patch] Failed to delete ${skillDir}:`, err);
+            vscode.window.showErrorMessage(`Failed to delete skill: ${err instanceof Error ? err.message : String(err)}`);
           }
-          const updated = await scanSkills(this.currentScope, workspaceRoot, this.currentAgentFilter);
-          this.postMessage({ type: "skills:loaded", payload: updated });
         }
         break;
       }
@@ -251,7 +253,7 @@ export class DashboardPanel {
       case "skill:checkAgents": {
         const agentsWithSkill = await findAgentsWithSkill(
           message.payload.skillName,
-          this.currentScope,
+          message.payload.scope ?? this.currentScope,
           workspaceRoot
         );
         this.postMessage({ type: "skill:agentsWithSkill", payload: agentsWithSkill });

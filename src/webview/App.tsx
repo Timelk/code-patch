@@ -216,20 +216,20 @@ export const App: FC = () => {
     (skillName: string, targetAgents: string[]) => {
       postMessage({
         type: "sync:execute",
-        payload: { skillName, targetAgents },
+        payload: { skillName, targetAgents, scope },
       });
     },
-    []
+    [scope]
   );
 
   const handleBatchSync = useCallback(
     (skillNames: string[], targetAgents: string[]) => {
       postMessage({
         type: "sync:batch",
-        payload: { skillNames, targetAgents },
+        payload: { skillNames, targetAgents, scope },
       });
     },
-    []
+    [scope]
   );
 
   const handleCreateSkill = useCallback(
@@ -261,9 +261,9 @@ export const App: FC = () => {
   // Context-menu sync for a single skill from sidebar — opens sync dialog directly
   const handleSyncSkill = useCallback((skill: Skill) => {
     setSelectedSkill(skill);
-    postMessage({ type: "skill:checkAgents", payload: { skillName: skill.name } });
+    postMessage({ type: "skill:checkAgents", payload: { skillName: skill.name, scope } });
     setPendingSyncSkill(skill);
-  }, [setSelectedSkill]);
+  }, [setSelectedSkill, scope]);
 
   const handleConfirmDelete = useCallback(() => {
     if (deleteTargets) {
@@ -314,9 +314,9 @@ export const App: FC = () => {
   const handleCheckAgentsForSync = useCallback((skillName: string) => {
     postMessage({
       type: "skill:checkAgents",
-      payload: { skillName },
+      payload: { skillName, scope },
     });
-  }, []);
+  }, [scope]);
 
   const handleDiffRequest = useCallback((skillName: string) => {
     postMessage({

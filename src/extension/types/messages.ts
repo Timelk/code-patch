@@ -72,6 +72,7 @@ export type WebviewMessage =
       readonly payload: {
         readonly skillName: string;
         readonly targetAgents: readonly string[];
+        readonly scope?: Scope;
       };
     }
   | {
@@ -79,6 +80,7 @@ export type WebviewMessage =
       readonly payload: {
         readonly skillNames: readonly string[];
         readonly targetAgents: readonly string[];
+        readonly scope?: Scope;
       };
     }
   | {
@@ -105,7 +107,7 @@ export type WebviewMessage =
   | { readonly type: "diff:request"; readonly payload: { readonly skillName: string } }
   | { readonly type: "history:load" }
   | { readonly type: "history:clear" }
-  | { readonly type: "skill:checkAgents"; readonly payload: { readonly skillName: string } }
+  | { readonly type: "skill:checkAgents"; readonly payload: { readonly skillName: string; readonly scope?: Scope } }
   | { readonly type: "settings:open" };
 
 export type Scope = "global" | "project";

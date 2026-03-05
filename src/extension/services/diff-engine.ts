@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import * as os from "os";
 import { AGENT_REGISTRY } from "../types/agent";
 import { resolveSkillsDir } from "./agent-detector";
 
@@ -100,7 +101,7 @@ async function findCanonicalContent(
       ? path.join(workspaceRoot, ".agents/skills", skillName, "SKILL.md")
       : null,
     path.join(
-      process.env["XDG_CONFIG_HOME"] ?? path.join(require("os").homedir(), ".config"),
+      process.env["XDG_CONFIG_HOME"] ?? path.join(os.homedir(), ".config"),
       "agents/skills",
       skillName,
       "SKILL.md"
