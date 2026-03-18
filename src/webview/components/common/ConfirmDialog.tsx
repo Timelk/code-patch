@@ -1,4 +1,4 @@
-import { type FC } from "react";
+import { type FC, useEffect } from "react";
 
 interface ConfirmDialogProps {
   readonly title: string;
@@ -15,6 +15,14 @@ export const ConfirmDialog: FC<ConfirmDialogProps> = ({
   onConfirm,
   onCancel,
 }) => {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onCancel]);
+
   return (
     <>
       {/* Backdrop */}
@@ -26,6 +34,9 @@ export const ConfirmDialog: FC<ConfirmDialogProps> = ({
 
       {/* Dialog */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-dialog-title"
         className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 rounded-lg shadow-2xl z-50 border"
         style={{
           background: "var(--cp-surface)",
@@ -33,7 +44,7 @@ export const ConfirmDialog: FC<ConfirmDialogProps> = ({
         }}
       >
         <div className="p-4">
-          <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--cp-text)" }}>
+          <h3 id="confirm-dialog-title" className="text-sm font-semibold mb-2" style={{ color: "var(--cp-text)" }}>
             {title}
           </h3>
           <p className="text-xs leading-relaxed whitespace-pre-line" style={{ color: "var(--cp-text-muted)" }}>
@@ -59,7 +70,7 @@ export const ConfirmDialog: FC<ConfirmDialogProps> = ({
             className="px-3 py-1.5 rounded text-xs font-medium transition-colors"
             style={{
               background: "var(--cp-error)",
-              color: "#fff",
+              color: "var(--cp-primary-fg)",
             }}
             onClick={onConfirm}
           >

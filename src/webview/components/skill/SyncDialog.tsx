@@ -1,4 +1,4 @@
-import { type FC, useState } from "react";
+import { type FC, useState, useEffect } from "react";
 import type { AgentInfo } from "../../hooks/useAgents";
 
 interface SyncDialogProps {
@@ -7,6 +7,8 @@ interface SyncDialogProps {
   readonly agentsWithSkill: ReadonlySet<string>;
   readonly onSync: (targetAgents: string[]) => void;
   readonly onClose: () => void;
+  /** When true, render as inline panel (no backdrop / no absolute positioning) */
+  readonly centered?: boolean;
 }
 
 export const SyncDialog: FC<SyncDialogProps> = ({
@@ -15,6 +17,7 @@ export const SyncDialog: FC<SyncDialogProps> = ({
   agentsWithSkill,
   onSync,
   onClose,
+  centered = false,
 }) => {
   // Only show installed agents that do NOT already have this skill
   const availableAgents = agents.filter(
@@ -52,25 +55,20 @@ export const SyncDialog: FC<SyncDialogProps> = ({
     }
   };
 
-  return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40"
-        onClick={onClose}
-      />
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
 
-      {/* Dialog */}
-      <div
-        className="absolute top-full left-0 mt-1 w-60 rounded-lg shadow-xl z-50 p-3 border"
-        style={{
-          background: "var(--cp-surface)",
-          borderColor: "var(--cp-border)",
-        }}
-      >
-        <p className="text-[10px] mb-2 font-medium" style={{ color: "var(--cp-text-muted)" }}>
-          Sync "{skillName}" to:
-        </p>
+  // Shared dialog content rendered by both modes
+  const dialogContent = (
+    <>
+      <p id="sync-dialog-title" className="text-[10px] mb-2 font-medium" style={{ color: "var(--cp-text-muted)" }}>
+        Sync "{skillName}" to:
+      </p>
 
         {availableAgents.length === 0 ? (
           <p className="text-xs py-2 text-center" style={{ color: "var(--cp-text-muted)" }}>
@@ -147,6 +145,48 @@ export const SyncDialog: FC<SyncDialogProps> = ({
             Cancel
           </button>
         </div>
+    </>
+  );
+
+  // Centered mode: render as inline panel (parent provides backdrop + centering)
+  if (centered) {
+    return (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sync-dialog-title"
+        className="w-72 rounded-lg shadow-xl p-3 border"
+        style={{
+          background: "var(--cp-surface)",
+          borderColor: "var(--cp-border)",
+        }}
+      >
+        {dialogContent}
+      </div>
+    );
+  }
+
+  // Dropdown mode: own backdrop + absolute positioning (used in toolbar)
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40"
+        onClick={onClose}
+      />
+
+      {/* Dialog */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sync-dialog-title"
+        className="absolute top-full left-0 mt-1 w-60 rounded-lg shadow-xl z-50 p-3 border"
+        style={{
+          background: "var(--cp-surface)",
+          borderColor: "var(--cp-border)",
+        }}
+      >
+        {dialogContent}
       </div>
     </>
   );

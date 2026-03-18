@@ -1,4 +1,4 @@
-import { type FC } from "react";
+import { type FC, useEffect } from "react";
 import type { AgentInfo } from "../../hooks/useAgents";
 import { postMessage } from "../../services/vscode-message";
 
@@ -18,6 +18,14 @@ export const SettingsPanel: FC<SettingsPanelProps> = ({ agents, onClose }) => {
     postMessage({ type: "settings:open" });
   };
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
   return (
     <div
       className="fixed inset-0 z-40 flex items-center justify-center"
@@ -27,6 +35,9 @@ export const SettingsPanel: FC<SettingsPanelProps> = ({ agents, onClose }) => {
       }}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-title"
         className="rounded-lg shadow-xl border w-[480px] max-h-[80vh] flex flex-col"
         style={{
           background: "var(--cp-surface)",
@@ -38,7 +49,7 @@ export const SettingsPanel: FC<SettingsPanelProps> = ({ agents, onClose }) => {
           className="flex items-center justify-between px-4 py-3 border-b shrink-0"
           style={{ borderColor: "var(--cp-border)" }}
         >
-          <h2 className="text-sm font-bold" style={{ color: "var(--cp-text)" }}>
+          <h2 id="settings-title" className="text-sm font-bold" style={{ color: "var(--cp-text)" }}>
             Settings
           </h2>
           <button
@@ -51,6 +62,7 @@ export const SettingsPanel: FC<SettingsPanelProps> = ({ agents, onClose }) => {
               e.currentTarget.style.background = "transparent";
             }}
             onClick={onClose}
+            aria-label="Close dialog"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -123,7 +135,7 @@ export const SettingsPanel: FC<SettingsPanelProps> = ({ agents, onClose }) => {
             <SettingsRow
               label="Extension"
               description="Code Patch — AI agent skill manager"
-              value="v0.1.0"
+              value="v0.2.0"
             />
             <SettingsRow
               label="Sync Engine"

@@ -45,7 +45,7 @@ function applyOverrides(
   return {
     ...agent,
     skillsDir: override.skillsDir ?? agent.skillsDir,
-    ownSkillsDir: override.skillsDir ?? agent.ownSkillsDir,
+    ownSkillsDir: agent.ownSkillsDir,
     globalSkillsDir: override.globalSkillsDir ?? agent.globalSkillsDir,
   };
 }

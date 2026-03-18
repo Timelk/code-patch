@@ -1,4 +1,4 @@
-import { type FC, useEffect, useCallback, useState, useRef } from "react";
+import { type FC, useEffect, useCallback, useState, useRef, useMemo } from "react";
 import { Header } from "./components/layout/Header";
 import { Sidebar } from "./components/layout/Sidebar";
 import { MainContent } from "./components/layout/MainContent";
@@ -16,6 +16,7 @@ import { useVSCodeApi } from "./hooks/useVSCodeApi";
 import { postMessage } from "./services/vscode-message";
 import type { Skill, Scope } from "./hooks/useSkills";
 import type { McpServer } from "./components/mcp/McpList";
+import type { RemoteSkill as RemoteSkillItem } from "./services/remote-skill-api";
 
 interface SyncReport {
   readonly results: readonly {
@@ -41,7 +42,11 @@ type ExtensionMessage =
   | { type: "mcps:loaded"; payload: McpServer[] }
   | { type: "diff:result"; payload: DiffReport }
   | { type: "history:loaded"; payload: SyncHistoryEntry[] }
-  | { type: "skill:agentsWithSkill"; payload: string[] };
+  | { type: "skill:agentsWithSkill"; payload: string[] }
+  | { type: "error:occurred"; payload: { operation: string; message: string } }
+  | { type: "remote:searchResult"; payload: { sourceId: string; skills: RemoteSkillItem[]; total: number; error?: string } }
+  | { type: "remote:installResult"; payload: { success: boolean; skillName: string; error?: string } }
+  | { type: "remote:removeResult"; payload: { success: boolean; skillName: string; error?: string } };
 
 export const App: FC = () => {
   const {
@@ -99,6 +104,15 @@ export const App: FC = () => {
 
   // Settings panel
   const [showSettings, setShowSettings] = useState(false);
+
+  // Remote skills state
+  const [remoteSkills, setRemoteSkills] = useState<readonly RemoteSkillItem[]>([]);
+  const [remoteTotal, setRemoteTotal] = useState(0);
+  const [remoteLoading, setRemoteLoading] = useState(false);
+  const [remoteError, setRemoteError] = useState<string | null>(null);
+
+  // Remote install/remove pending state
+  const [pendingRemoteSkills, setPendingRemoteSkills] = useState<Set<string>>(new Set());
 
   // Pending sync from context menu — triggers sync dialog for a single skill
   const [pendingSyncSkill, setPendingSyncSkill] = useState<Skill | null>(null);
@@ -179,6 +193,51 @@ export const App: FC = () => {
         case "skill:agentsWithSkill":
           setAgentsWithSkill(new Set(message.payload));
           break;
+        case "error:occurred": {
+          const errorMsg = `Error in ${message.payload.operation}: ${message.payload.message}`;
+          setSyncNotification(errorMsg);
+          clearTimeout(notificationTimerRef.current);
+          notificationTimerRef.current = setTimeout(() => setSyncNotification(null), 5000);
+          break;
+        }
+        case "remote:searchResult": {
+          const { skills: rSkills, total, error } = message.payload;
+          setRemoteSkills(rSkills);
+          setRemoteTotal(total);
+          setRemoteError(error ?? null);
+          setRemoteLoading(false);
+          break;
+        }
+        case "remote:installResult": {
+          const { success, skillName, error: installError } = message.payload;
+          setPendingRemoteSkills((prev) => {
+            const next = new Set(prev);
+            next.delete(skillName);
+            return next;
+          });
+          const installMsg = success
+            ? `Installed "${skillName}" successfully`
+            : `Failed to install "${skillName}": ${installError}`;
+          setSyncNotification(installMsg);
+          clearTimeout(notificationTimerRef.current);
+          notificationTimerRef.current = setTimeout(() => setSyncNotification(null), 3000);
+          break;
+        }
+        case "remote:removeResult": {
+          const { success: removeSuccess, skillName: removedName, error: removeError } = message.payload;
+          setPendingRemoteSkills((prev) => {
+            const next = new Set(prev);
+            next.delete(removedName);
+            return next;
+          });
+          const removeMsg = removeSuccess
+            ? `Removed "${removedName}" successfully`
+            : `Failed to remove "${removedName}": ${removeError}`;
+          setSyncNotification(removeMsg);
+          clearTimeout(notificationTimerRef.current);
+          notificationTimerRef.current = setTimeout(() => setSyncNotification(null), 3000);
+          break;
+        }
       }
     },
     [handleSkillsLoaded, handleAgentsDetected, scope, agentFilter, multiSelect]
@@ -233,10 +292,10 @@ export const App: FC = () => {
   );
 
   const handleCreateSkill = useCallback(
-    (name: string, content: string) => {
+    (name: string, description: string, content: string) => {
       postMessage({
         type: "skill:create",
-        payload: { name, content, agentFilter },
+        payload: { name, description, content, agentFilter },
       });
       setShowCreateDialog(false);
     },
@@ -334,6 +393,31 @@ export const App: FC = () => {
     postMessage({ type: "history:clear" });
   }, []);
 
+  const handleRemoteSearch = useCallback(
+    (sourceId: string, query?: string) => {
+      setRemoteLoading(true);
+      setRemoteError(null);
+      postMessage({ type: "remote:search", payload: { sourceId, query } });
+    },
+    []
+  );
+
+  const handleRemoteInstall = useCallback(
+    (sourceId: string, skill: RemoteSkillItem) => {
+      setPendingRemoteSkills((prev) => new Set(prev).add(skill.name));
+      postMessage({ type: "remote:install", payload: { sourceId, skill, targetAgent: agentFilter } });
+    },
+    [agentFilter]
+  );
+
+  const handleRemoteRemove = useCallback(
+    (skillName: string) => {
+      setPendingRemoteSkills((prev) => new Set(prev).add(skillName));
+      postMessage({ type: "remote:remove", payload: { skillName } });
+    },
+    []
+  );
+
   const handleOpenSettings = useCallback(() => {
     setShowSettings(true);
   }, []);
@@ -346,6 +430,12 @@ export const App: FC = () => {
     setRightPanelWidth((prev) => Math.max(160, Math.min(400, prev - deltaX)));
   }, []);
 
+  // Derive installed skill names for remote panel installed-state detection
+  const installedSkillNamesSet = useMemo(
+    () => new Set(allSkills.map((s) => s.name)),
+    [allSkills]
+  );
+
   // ─── Render ────────────────────────────────────────────────────────
 
   return (
@@ -356,6 +446,7 @@ export const App: FC = () => {
         agentFilter={agentFilter}
         onAgentFilterChange={handleAgentFilterChange}
         onOpenSettings={handleOpenSettings}
+        agents={agents}
       />
 
       <div className="flex-1 flex overflow-hidden">
@@ -379,6 +470,15 @@ export const App: FC = () => {
             onDeleteSkill={handleDeleteSkill}
             onSyncSkill={handleSyncSkill}
             showBadge={agentFilter === undefined}
+            remoteSkills={remoteSkills}
+            remoteTotal={remoteTotal}
+            remoteLoading={remoteLoading}
+            remoteError={remoteError}
+            onRemoteSearch={handleRemoteSearch}
+            installedSkillNames={installedSkillNamesSet}
+            onRemoteInstall={handleRemoteInstall}
+            onRemoteRemove={handleRemoteRemove}
+            pendingRemoteSkills={pendingRemoteSkills}
           />
         </div>
         <ResizeHandle onDrag={handleSidebarResize} />
@@ -387,8 +487,6 @@ export const App: FC = () => {
           agents={agents}
           onSync={handleSync}
           onBatchSync={handleBatchSync}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
           onBatchDelete={handleBatchDelete}
           onDiffRequest={handleDiffRequest}
           onShowHistory={handleShowHistory}
@@ -465,24 +563,17 @@ export const App: FC = () => {
             if (e.target === e.currentTarget) setPendingSyncSkill(null);
           }}
         >
-          <div
-            className="rounded-lg shadow-xl border p-4 w-[320px]"
-            style={{
-              background: "var(--cp-surface)",
-              borderColor: "var(--cp-border)",
+          <SyncDialog
+            skillName={pendingSyncSkill.name}
+            agents={agents}
+            agentsWithSkill={agentsWithSkill}
+            centered
+            onSync={(targetAgents) => {
+              handleSync(pendingSyncSkill.name, targetAgents);
+              setPendingSyncSkill(null);
             }}
-          >
-            <SyncDialog
-              skillName={pendingSyncSkill.name}
-              agents={agents}
-              agentsWithSkill={agentsWithSkill}
-              onSync={(targetAgents) => {
-                handleSync(pendingSyncSkill.name, targetAgents);
-                setPendingSyncSkill(null);
-              }}
-              onClose={() => setPendingSyncSkill(null)}
-            />
-          </div>
+            onClose={() => setPendingSyncSkill(null)}
+          />
         </div>
       )}
 

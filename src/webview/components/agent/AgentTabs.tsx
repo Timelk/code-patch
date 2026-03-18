@@ -1,32 +1,40 @@
-import { type FC } from "react";
+import { type FC, useMemo } from "react";
+
+interface AgentInfo {
+  readonly name: string;
+  readonly displayName: string;
+  readonly installed: boolean;
+}
 
 interface AgentTabsProps {
+  readonly agents: readonly AgentInfo[];
   readonly activeFilter: string | undefined;
   readonly onFilterChange: (filter: string | undefined) => void;
 }
 
-const TABS: readonly { label: string; value: string | undefined }[] = [
-  { label: "Claude Code", value: "claude-code" },
-  { label: "Codex", value: "codex" },
-  { label: "OpenCode", value: "opencode" },
-  { label: "All", value: undefined },
-];
-
 export const AgentTabs: FC<AgentTabsProps> = ({
+  agents,
   activeFilter,
   onFilterChange,
 }) => {
+  const tabs = useMemo(() => {
+    const installed = agents
+      .filter((a) => a.installed)
+      .map((a) => ({ label: a.displayName, value: a.name }));
+    return [...installed, { label: "All", value: undefined as string | undefined }];
+  }, [agents]);
+
   return (
     <div
-      className="flex items-center p-0.5 rounded"
+      className="flex items-center p-0.5 rounded gap-0.5 flex-wrap"
       style={{ background: "var(--cp-input-bg)" }}
     >
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const isActive = activeFilter === tab.value;
         return (
           <button
             key={tab.label}
-            className="px-2.5 py-1 rounded text-[11px] font-medium transition-all"
+            className="px-2.5 py-1 rounded text-[11px] font-medium transition-all whitespace-nowrap"
             style={{
               background: isActive ? "var(--cp-surface)" : "transparent",
               color: isActive ? "var(--cp-text)" : "var(--cp-text-muted)",

@@ -38,6 +38,18 @@ export interface SyncHistoryEntry {
   readonly timestamp: number;
 }
 
+// ─── Remote Skill Types ───────────────────────────────────────────
+
+export interface RemoteSkillItem {
+  readonly name: string;
+  readonly description: string;
+  readonly author: string;
+  readonly downloads: number;
+  readonly tags: readonly string[];
+  readonly version?: string;
+  readonly homepage?: string;
+}
+
 // ─── Extension → Webview ───────────────────────────────────────────
 
 export type ExtensionMessage =
@@ -54,7 +66,11 @@ export type ExtensionMessage =
   | { readonly type: "mcps:loaded"; readonly payload: readonly McpServerInfo[] }
   | { readonly type: "diff:result"; readonly payload: DiffReport }
   | { readonly type: "history:loaded"; readonly payload: readonly SyncHistoryEntry[] }
-  | { readonly type: "skill:agentsWithSkill"; readonly payload: readonly string[] };
+  | { readonly type: "skill:agentsWithSkill"; readonly payload: readonly string[] }
+  | { readonly type: "error:occurred"; readonly payload: { readonly operation: string; readonly message: string } }
+  | { readonly type: "remote:searchResult"; readonly payload: { readonly sourceId: string; readonly skills: readonly RemoteSkillItem[]; readonly total: number; readonly error?: string } }
+  | { readonly type: "remote:installResult"; readonly payload: { readonly success: boolean; readonly skillName: string; readonly error?: string } }
+  | { readonly type: "remote:removeResult"; readonly payload: { readonly success: boolean; readonly skillName: string; readonly error?: string } };
 
 // ─── Webview → Extension ───────────────────────────────────────────
 
@@ -85,6 +101,7 @@ export type WebviewMessage =
       readonly type: "skill:create";
       readonly payload: {
         readonly name: string;
+        readonly description?: string;
         readonly content: string;
         readonly agentFilter?: string;
       };
@@ -106,7 +123,10 @@ export type WebviewMessage =
   | { readonly type: "history:load" }
   | { readonly type: "history:clear" }
   | { readonly type: "skill:checkAgents"; readonly payload: { readonly skillName: string } }
-  | { readonly type: "settings:open" };
+  | { readonly type: "settings:open" }
+  | { readonly type: "remote:search"; readonly payload: { readonly sourceId: string; readonly query?: string } }
+  | { readonly type: "remote:install"; readonly payload: { readonly sourceId: string; readonly skill: RemoteSkillItem; readonly targetAgent?: string } }
+  | { readonly type: "remote:remove"; readonly payload: { readonly skillName: string } };
 
 export type Scope = "global" | "project";
 

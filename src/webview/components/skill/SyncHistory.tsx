@@ -1,4 +1,4 @@
-import { type FC } from "react";
+import { type FC, useEffect } from "react";
 
 export interface SyncHistoryEntry {
   readonly id: string;
@@ -23,6 +23,14 @@ function formatTime(ts: number): string {
 }
 
 export const SyncHistory: FC<SyncHistoryProps> = ({ entries, onClose, onClear }) => {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
   return (
     <>
       {/* Backdrop */}
@@ -34,6 +42,9 @@ export const SyncHistory: FC<SyncHistoryProps> = ({ entries, onClose, onClear })
 
       {/* Dialog */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sync-history-title"
         className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[460px] max-h-[70vh] rounded-lg shadow-2xl z-50 border flex flex-col"
         style={{
           background: "var(--cp-surface)",
@@ -45,7 +56,7 @@ export const SyncHistory: FC<SyncHistoryProps> = ({ entries, onClose, onClear })
           className="flex items-center justify-between px-4 py-3 border-b shrink-0"
           style={{ borderColor: "var(--cp-border)" }}
         >
-          <h3 className="text-sm font-semibold" style={{ color: "var(--cp-text)" }}>
+          <h3 id="sync-history-title" className="text-sm font-semibold" style={{ color: "var(--cp-text)" }}>
             Sync History
           </h3>
           <div className="flex items-center gap-2">
@@ -62,6 +73,7 @@ export const SyncHistory: FC<SyncHistoryProps> = ({ entries, onClose, onClear })
               className="w-5 h-5 flex items-center justify-center rounded"
               style={{ color: "var(--cp-text-muted)" }}
               onClick={onClose}
+              aria-label="Close dialog"
             >
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="18" y1="6" x2="6" y2="18" />

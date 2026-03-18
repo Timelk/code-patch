@@ -80,7 +80,7 @@ export const RightPanel: FC<RightPanelProps> = ({ agents, skillCount, syncStats 
         </h3>
         <div className="space-y-1.5">
           <FeatureRow name="Context Awareness" description="Auto-includes imported file refs" active />
-          <FeatureRow name="Symlink Sync" description="Single source of truth via symlinks" active />
+          <FeatureRow name="Copy Sync" description="Safe cross-platform copy-based sync" active />
           <FeatureRow name="File Watcher" description="Auto-refresh on SKILL.md changes" active />
           <FeatureRow name="MCP Discovery" description="Scans agent MCP configurations" active />
         </div>

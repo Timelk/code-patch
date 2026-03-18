@@ -16,6 +16,14 @@ interface SkillListProps {
   readonly showBadge?: boolean;
 }
 
+/** Shorten absolute file path for display (replace home dir with ~) */
+function shortenPath(filePath: string): string {
+  return filePath
+    .replace(/^\/home\/[^/]+/, "~")
+    .replace(/^\/Users\/[^/]+/, "~")
+    .replace(/^C:\\Users\\[^\\]+/i, "~");
+}
+
 /** Get a short badge label from sourceAgent */
 function getAgentBadge(sourceAgent: string): string {
   const map: Record<string, string> = {
@@ -183,6 +191,18 @@ export const SkillList: FC<SkillListProps> = ({
                   {skill.description}
                 </div>
               )}
+              <div
+                className={`text-[9px] truncate mt-0.5 ${showBadge ? "ml-6" : ""}`}
+                style={{
+                  color: isSelected
+                    ? "var(--cp-list-active-fg)"
+                    : "var(--cp-text-muted)",
+                  opacity: 0.6,
+                }}
+                title={skill.filePath}
+              >
+                {shortenPath(skill.filePath)}
+              </div>
             </button>
           </div>
         );

@@ -1,4 +1,4 @@
-import { type FC } from "react";
+import { type FC, useEffect } from "react";
 
 export interface DiffEntry {
   readonly agentName: string;
@@ -22,6 +22,14 @@ const STATUS_LABELS: Record<DiffEntry["status"], { label: string; color: string 
 };
 
 export const DiffPreview: FC<DiffPreviewProps> = ({ skillName, entries, onClose }) => {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
   return (
     <>
       {/* Backdrop */}
@@ -33,6 +41,9 @@ export const DiffPreview: FC<DiffPreviewProps> = ({ skillName, entries, onClose 
 
       {/* Dialog */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="diff-preview-title"
         className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] max-h-[70vh] rounded-lg shadow-2xl z-50 border flex flex-col"
         style={{
           background: "var(--cp-surface)",
@@ -44,13 +55,14 @@ export const DiffPreview: FC<DiffPreviewProps> = ({ skillName, entries, onClose 
           className="flex items-center justify-between px-4 py-3 border-b shrink-0"
           style={{ borderColor: "var(--cp-border)" }}
         >
-          <h3 className="text-sm font-semibold" style={{ color: "var(--cp-text)" }}>
+          <h3 id="diff-preview-title" className="text-sm font-semibold" style={{ color: "var(--cp-text)" }}>
             Diff: {skillName}
           </h3>
           <button
             className="w-5 h-5 flex items-center justify-center rounded"
             style={{ color: "var(--cp-text-muted)" }}
             onClick={onClose}
+            aria-label="Close dialog"
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18" />

@@ -3,12 +3,19 @@ import { AgentTabs } from "../agent/AgentTabs";
 import { ScopeToggle } from "../common/ScopeToggle";
 import type { Scope } from "../../hooks/useSkills";
 
+interface AgentInfo {
+  readonly name: string;
+  readonly displayName: string;
+  readonly installed: boolean;
+}
+
 interface HeaderProps {
   readonly scope: Scope;
   readonly onScopeChange: (scope: Scope) => void;
   readonly agentFilter: string | undefined;
   readonly onAgentFilterChange: (filter: string | undefined) => void;
   readonly onOpenSettings: () => void;
+  readonly agents: readonly AgentInfo[];
 }
 
 export const Header: FC<HeaderProps> = ({
@@ -17,6 +24,7 @@ export const Header: FC<HeaderProps> = ({
   agentFilter,
   onAgentFilterChange,
   onOpenSettings,
+  agents,
 }) => {
   return (
     <header className="shrink-0 border-b" style={{ borderColor: "var(--cp-border)", background: "var(--cp-surface)" }}>
@@ -55,6 +63,7 @@ export const Header: FC<HeaderProps> = ({
       {/* Agent tabs + scope toggle */}
       <div className="px-4 py-2 flex items-center justify-between flex-wrap gap-3">
         <AgentTabs
+          agents={agents}
           activeFilter={agentFilter}
           onFilterChange={onAgentFilterChange}
         />

@@ -1,13 +1,52 @@
 import * as vscode from "vscode";
 import * as path from "path";
+import * as fs from "fs";
+import { randomBytes } from "crypto";
 import type { WebviewMessage, ExtensionMessage, Scope } from "../types/messages";
-import { detectAgents, findAgentsWithSkill } from "../services/agent-detector";
+import { detectAgents, findAgentsWithSkill, resolveSkillsDir, resolveOwnSkillsDir } from "../services/agent-detector";
+import { AGENT_REGISTRY } from "../types/agent";
 import { scanSkills } from "../services/skill-scanner";
 import { syncSkill } from "../services/sync-engine";
 import { scanMcpServers } from "../services/mcp-scanner";
 import { diffSkill } from "../services/diff-engine";
 import { loadSyncHistory, addSyncHistoryEntry, clearSyncHistory } from "../services/sync-history";
 import { SkillFileWatcher } from "../services/file-watcher";
+
+/**
+ * Collects all known skill directories for path validation.
+ */
+function getAllKnownSkillsDirs(
+  scope: Scope,
+  workspaceRoot: string | undefined
+): string[] {
+  const dirs: string[] = [];
+  for (const agent of AGENT_REGISTRY) {
+    const skillsDir = resolveSkillsDir(agent, scope, workspaceRoot);
+    if (skillsDir) dirs.push(skillsDir);
+    const ownDir = resolveOwnSkillsDir(agent, scope, workspaceRoot);
+    if (ownDir && ownDir !== skillsDir) dirs.push(ownDir);
+  }
+  return dirs;
+}
+
+/**
+ * Validates that a file path is inside one of the known skill directories.
+ */
+async function isPathInsideSkillsDirs(
+  filePath: string,
+  scope: Scope,
+  workspaceRoot: string | undefined
+): Promise<boolean> {
+  const allowedRoots = getAllKnownSkillsDirs(scope, workspaceRoot);
+  let realPath: string;
+  try {
+    realPath = await fs.promises.realpath(filePath);
+  } catch {
+    // If file doesn't exist, check parent directory
+    realPath = path.resolve(filePath);
+  }
+  return allowedRoots.some((root) => realPath.startsWith(root));
+}
 
 /**
  * Manages a Code Patch dashboard as an editor tab (WebviewPanel).
@@ -169,32 +208,41 @@ export class DashboardPanel {
       }
 
       case "skill:openInEditor": {
-        const uri = vscode.Uri.file(message.payload.path);
+        const openPath = message.payload.path;
+        if (!(await isPathInsideSkillsDirs(openPath, this.currentScope, workspaceRoot))) {
+          console.error("[code-patch] Blocked opening path outside skills dirs:", openPath);
+          break;
+        }
+        const uri = vscode.Uri.file(openPath);
         await vscode.window.showTextDocument(uri);
         break;
       }
 
       case "skill:create": {
+        // Sanitize skill name to prevent path traversal
+        const safeName = path.basename(message.payload.name).replace(/[^a-z0-9_-]/gi, "");
+        if (!safeName || safeName !== message.payload.name) {
+          vscode.window.showErrorMessage("Invalid skill name. Use only letters, numbers, hyphens, and underscores.");
+          break;
+        }
         // Determine target dir based on agent filter
-        const { resolveSkillsDir: resolveDir } = await import("../services/agent-detector");
-        const { AGENT_REGISTRY: agents } = await import("../types/agent");
         const agentName = message.payload.agentFilter;
         const targetAgent = agentName
-          ? agents.find((a: { name: string }) => a.name === agentName)
-          : agents.find((a: { name: string }) => a.name === "claude-code"); // default
+          ? AGENT_REGISTRY.find((a) => a.name === agentName)
+          : AGENT_REGISTRY.find((a) => a.name === "claude-code"); // default
         const baseDir = targetAgent
-          ? resolveDir(targetAgent, this.currentScope, workspaceRoot)
+          ? resolveSkillsDir(targetAgent, this.currentScope, workspaceRoot)
           : (workspaceRoot ? path.join(workspaceRoot, ".agents/skills") : null);
         const targetDir = baseDir
-          ? path.join(baseDir, message.payload.name)
+          ? path.join(baseDir, safeName)
           : null;
         if (targetDir) {
-          const { mkdir, writeFile } = await import("fs/promises");
-          await mkdir(targetDir, { recursive: true });
+          await fs.promises.mkdir(targetDir, { recursive: true });
+          const description = message.payload.description ?? "";
           const content =
-            `---\nname: ${message.payload.name}\ndescription: ""\n---\n\n` +
+            `---\nname: ${safeName}\ndescription: "${description}"\n---\n\n` +
             message.payload.content;
-          await writeFile(path.join(targetDir, "SKILL.md"), content, "utf-8");
+          await fs.promises.writeFile(path.join(targetDir, "SKILL.md"), content, "utf-8");
           const skills = await scanSkills(this.currentScope, workspaceRoot, agentName);
           this.postMessage({ type: "skills:loaded", payload: skills });
         } else {
@@ -207,10 +255,14 @@ export class DashboardPanel {
         // Delete the specific skill file from the agent directory indicated by filePath
         const skillFilePath = message.payload.filePath;
         if (skillFilePath) {
-          const { rm } = await import("fs/promises");
           const skillDir = path.dirname(skillFilePath);
+          // Validate path is inside a known skills directory
+          if (!(await isPathInsideSkillsDirs(skillDir, this.currentScope, workspaceRoot))) {
+            console.error("[code-patch] Blocked deletion of path outside skills dirs:", skillDir);
+            break;
+          }
           try {
-            await rm(skillDir, { recursive: true });
+            await fs.promises.rm(skillDir, { recursive: true });
           } catch (err) {
             console.error(`[code-patch] Failed to delete ${skillDir}:`, err);
           }
@@ -260,10 +312,328 @@ export class DashboardPanel {
       case "settings:open":
         await vscode.commands.executeCommand("workbench.action.openSettings", "codePatch");
         break;
+
+      case "remote:search": {
+        const { sourceId, query } = message.payload;
+        try {
+          const result = await this.fetchRemoteSkills(sourceId, query);
+          this.postMessage({ type: "remote:searchResult", payload: { sourceId, ...result } });
+        } catch (err) {
+          this.postMessage({
+            type: "remote:searchResult",
+            payload: {
+              sourceId,
+              skills: [],
+              total: 0,
+              error: err instanceof Error ? err.message : String(err),
+            },
+          });
+        }
+        break;
+      }
+
+      case "remote:install": {
+        const { sourceId: installSource, skill: remoteSkill, targetAgent: installAgent } = message.payload;
+        try {
+          await this.installRemoteSkill(remoteSkill, installSource, installAgent, workspaceRoot);
+          this.postMessage({ type: "remote:installResult", payload: { success: true, skillName: remoteSkill.name } });
+          // Refresh skill list
+          const updated = await scanSkills(this.currentScope, workspaceRoot, this.currentAgentFilter);
+          this.postMessage({ type: "skills:loaded", payload: updated });
+        } catch (err) {
+          this.postMessage({
+            type: "remote:installResult",
+            payload: { success: false, skillName: remoteSkill.name, error: err instanceof Error ? err.message : String(err) },
+          });
+        }
+        break;
+      }
+
+      case "remote:remove": {
+        const { skillName: removeSkillName } = message.payload;
+        try {
+          await this.removeInstalledSkill(removeSkillName, workspaceRoot);
+          this.postMessage({ type: "remote:removeResult", payload: { success: true, skillName: removeSkillName } });
+          // Refresh skill list
+          const updated = await scanSkills(this.currentScope, workspaceRoot, this.currentAgentFilter);
+          this.postMessage({ type: "skills:loaded", payload: updated });
+        } catch (err) {
+          this.postMessage({
+            type: "remote:removeResult",
+            payload: { success: false, skillName: removeSkillName, error: err instanceof Error ? err.message : String(err) },
+          });
+        }
+        break;
+      }
     }
     } catch (err) {
       console.error("[code-patch] Error handling message:", message.type, err);
+      this.postMessage({
+        type: "error:occurred",
+        payload: {
+          operation: message.type,
+          message: err instanceof Error ? err.message : String(err),
+        },
+      });
     }
+  }
+
+  // ─── Remote Skill Fetchers ────────────────────────────────────────
+
+  /** SkillHub CDN JSON cache (12K+ entries, cached for session lifetime) */
+  private skillhubCache: { skills: readonly any[]; fetchedAt: number } | null = null;
+
+  /**
+   * Install a remote skill locally by fetching its content or generating from metadata.
+   */
+  private async installRemoteSkill(
+    skill: import("../types/messages").RemoteSkillItem,
+    sourceId: string,
+    targetAgentName: string | undefined,
+    workspaceRoot: string | undefined
+  ): Promise<void> {
+    // Sanitize skill name for directory
+    const safeName = skill.name.replace(/[^a-z0-9_-]/gi, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+    if (!safeName) throw new Error("Invalid skill name");
+
+    // Resolve target directory
+    const agentName = targetAgentName ?? "claude-code";
+    const targetAgent = AGENT_REGISTRY.find((a) => a.name === agentName)
+      ?? AGENT_REGISTRY.find((a) => a.name === "claude-code");
+    const baseDir = targetAgent
+      ? resolveSkillsDir(targetAgent, this.currentScope, workspaceRoot)
+      : (workspaceRoot ? path.join(workspaceRoot, ".agents/skills") : null);
+
+    if (!baseDir) throw new Error("Cannot resolve target directory for skill installation");
+
+    const targetDir = path.join(baseDir, safeName);
+
+    // Check if already installed
+    try {
+      await fs.promises.access(path.join(targetDir, "SKILL.md"), fs.constants.F_OK);
+      throw new Error(`Skill "${safeName}" is already installed`);
+    } catch (err) {
+      if (err instanceof Error && err.message.includes("already installed")) throw err;
+      // Not installed — proceed
+    }
+
+    // Try to fetch real content from source, fallback to generated SKILL.md
+    let content: string;
+    try {
+      content = await this.fetchRemoteSkillContent(skill, sourceId);
+    } catch {
+      // Generate from metadata
+      const tagLine = skill.tags.length > 0 ? `\ntags: [${skill.tags.join(", ")}]` : "";
+      content =
+        `---\nname: ${safeName}\ndescription: "${skill.description}"` +
+        `\nauthor: ${skill.author}` +
+        (skill.version ? `\nversion: ${skill.version}` : "") +
+        tagLine +
+        `\nsource: ${sourceId}` +
+        (skill.homepage ? `\nhomepage: ${skill.homepage}` : "") +
+        `\n---\n\n# ${skill.name}\n\n${skill.description}\n`;
+    }
+
+    await fs.promises.mkdir(targetDir, { recursive: true });
+    await fs.promises.writeFile(path.join(targetDir, "SKILL.md"), content, "utf-8");
+  }
+
+  /**
+   * Fetch actual SKILL.md content from a remote source.
+   */
+  private async fetchRemoteSkillContent(
+    skill: import("../types/messages").RemoteSkillItem,
+    sourceId: string
+  ): Promise<string> {
+    switch (sourceId) {
+      case "skillhub": {
+        // Try CDN raw content endpoint
+        const slug = skill.name.replace(/[^a-z0-9_-]/gi, "-");
+        const url = `https://skillhub.tencent.com/api/skills/${encodeURIComponent(slug)}/raw`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`SkillHub content fetch failed: ${res.status}`);
+        return await res.text();
+      }
+      case "skillsmp": {
+        const apiKey = vscode.workspace.getConfiguration("codePatch").get<string>("skillsmpApiKey");
+        const headers: Record<string, string> = {};
+        if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+        const url = `https://skillsmp.com/api/v1/skills/${encodeURIComponent(skill.name)}/download`;
+        const res = await fetch(url, { headers });
+        if (!res.ok) throw new Error(`SkillsMP download failed: ${res.status}`);
+        return await res.text();
+      }
+      case "skillssh": {
+        if (!skill.homepage) throw new Error("No homepage URL for Skills.sh skill");
+        const url = `${skill.homepage}/raw`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Skills.sh content fetch failed: ${res.status}`);
+        return await res.text();
+      }
+      default:
+        throw new Error(`Unknown source: ${sourceId}`);
+    }
+  }
+
+  /**
+   * Remove a locally installed skill by name (searches all agent directories).
+   */
+  private async removeInstalledSkill(
+    skillName: string,
+    workspaceRoot: string | undefined
+  ): Promise<void> {
+    let removed = false;
+
+    for (const agent of AGENT_REGISTRY) {
+      const dir = resolveSkillsDir(agent, this.currentScope, workspaceRoot);
+      if (!dir) continue;
+
+      const skillDir = path.join(dir, skillName);
+      const skillFile = path.join(skillDir, "SKILL.md");
+
+      try {
+        await fs.promises.access(skillFile, fs.constants.F_OK);
+        await fs.promises.rm(skillDir, { recursive: true });
+        removed = true;
+      } catch {
+        // Skill not in this agent dir
+      }
+    }
+
+    if (!removed) {
+      throw new Error(`Skill "${skillName}" not found in any agent directory`);
+    }
+  }
+
+  private async fetchRemoteSkills(
+    sourceId: string,
+    query?: string
+  ): Promise<{ skills: readonly import("../types/messages").RemoteSkillItem[]; total: number }> {
+    switch (sourceId) {
+      case "skillhub":
+        return this.fetchSkillHub(query);
+      case "skillsmp":
+        return this.fetchSkillsMP(query);
+      case "skillssh":
+        return this.fetchSkillsSh(query);
+      default:
+        throw new Error(`Unknown remote source: ${sourceId}`);
+    }
+  }
+
+  /** SkillHub (skillhub.tencent.com) — static CDN JSON, client-side filter */
+  private async fetchSkillHub(
+    query?: string
+  ): Promise<{ skills: readonly import("../types/messages").RemoteSkillItem[]; total: number }> {
+    const CACHE_TTL = 10 * 60 * 1000; // 10 min
+    if (!this.skillhubCache || Date.now() - this.skillhubCache.fetchedAt > CACHE_TTL) {
+      const url = "https://cloudcache.tencentcs.com/qcloud/tea/app/data/skills.2d46363b.json?max_age=31536000";
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`SkillHub CDN returned ${res.status}`);
+      const data: any = await res.json();
+      this.skillhubCache = { skills: data.skills ?? [], fetchedAt: Date.now() };
+    }
+
+    let filtered = this.skillhubCache.skills;
+    if (query) {
+      const q = query.toLowerCase();
+      filtered = filtered.filter(
+        (s: any) =>
+          (s.name ?? "").toLowerCase().includes(q) ||
+          (s.description_zh ?? s.description ?? "").toLowerCase().includes(q) ||
+          (s.slug ?? "").toLowerCase().includes(q)
+      );
+    }
+
+    // Sort by downloads desc, take top 50
+    const sorted = [...filtered].sort((a: any, b: any) => (b.downloads ?? 0) - (a.downloads ?? 0));
+    const top = sorted.slice(0, 50);
+
+    return {
+      total: filtered.length,
+      skills: top.map((s: any) => ({
+        name: s.name ?? s.slug ?? "unknown",
+        description: s.description_zh ?? s.description ?? "",
+        author: s.owner ?? "unknown",
+        downloads: s.downloads ?? 0,
+        tags: s.tags ?? [],
+        version: s.version,
+        homepage: s.homepage,
+      })),
+    };
+  }
+
+  /** SkillsMP (skillsmp.com) — REST API, requires API key */
+  private async fetchSkillsMP(
+    query?: string
+  ): Promise<{ skills: readonly import("../types/messages").RemoteSkillItem[]; total: number }> {
+    const searchQuery = query || "agent";
+    const url = `https://skillsmp.com/api/v1/skills/search?q=${encodeURIComponent(searchQuery)}&limit=50&sortBy=stars`;
+
+    // API key from VSCode settings (optional)
+    const apiKey = vscode.workspace.getConfiguration("codePatch").get<string>("skillsmpApiKey");
+    const headers: Record<string, string> = {};
+    if (apiKey) {
+      headers["Authorization"] = `Bearer ${apiKey}`;
+    }
+
+    const res = await fetch(url, { headers });
+    if (!res.ok) {
+      if (res.status === 401) throw new Error("SkillsMP requires an API key. Set codePatch.skillsmpApiKey in settings.");
+      throw new Error(`SkillsMP returned ${res.status}`);
+    }
+
+    const data: any = await res.json();
+    const items: any[] = data.skills ?? data.data ?? data.results ?? [];
+
+    return {
+      total: data.total ?? items.length,
+      skills: items.slice(0, 50).map((s: any) => ({
+        name: s.name ?? s.filename ?? "unknown",
+        description: s.description ?? "",
+        author: s.owner ?? s.author ?? s.repo ?? "unknown",
+        downloads: s.stars ?? s.downloads ?? 0,
+        tags: s.tags ?? s.categories ?? [],
+        version: s.version,
+        homepage: s.url ?? s.homepage,
+      })),
+    };
+  }
+
+  /** Skills.sh — no public API, fetch SSR page and parse leaderboard */
+  private async fetchSkillsSh(
+    query?: string
+  ): Promise<{ skills: readonly import("../types/messages").RemoteSkillItem[]; total: number }> {
+    const url = query
+      ? `https://skills.sh/search?q=${encodeURIComponent(query)}`
+      : "https://skills.sh/";
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Skills.sh returned ${res.status}`);
+    const html = await res.text();
+
+    // Parse leaderboard entries: pattern "RANK NAME OWNER/REPO INSTALLS"
+    const skills: import("../types/messages").RemoteSkillItem[] = [];
+    // Match skill links: href="/owner/repo/skill-name" with heading and install count
+    const linkRegex = /<a[^>]*href="\/([^"]+)"[^>]*>[\s\S]*?<h3[^>]*>([^<]+)<\/h3>[\s\S]*?<p[^>]*>([^<]+)<\/p>[\s\S]*?<(?:span|div|td)[^>]*>([\d.]+K?)<\/(?:span|div|td)>/g;
+    let match;
+    while ((match = linkRegex.exec(html)) !== null && skills.length < 50) {
+      const [, urlPath, name, repo, installsStr] = match;
+      const installs = installsStr.includes("K")
+        ? parseFloat(installsStr) * 1000
+        : parseInt(installsStr, 10);
+      skills.push({
+        name: name.trim(),
+        description: `from ${repo.trim()}`,
+        author: repo.trim().split("/")[0] ?? "unknown",
+        downloads: Math.round(installs) || 0,
+        tags: [],
+        homepage: `https://skills.sh/${urlPath}`,
+      });
+    }
+
+    // If regex parsing fails (SSR structure changed), return what we have
+    return { total: skills.length, skills };
   }
 
   private postMessage(message: ExtensionMessage): void {
@@ -300,11 +670,5 @@ export class DashboardPanel {
 }
 
 function getNonce(): string {
-  let text = "";
-  const possible =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  for (let i = 0; i < 32; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
+  return randomBytes(16).toString("base64");
 }

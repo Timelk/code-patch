@@ -1,7 +1,7 @@
-import { type FC, useState } from "react";
+import { type FC, useState, useEffect } from "react";
 
 interface CreateSkillDialogProps {
-  readonly onCreateSkill: (name: string, content: string) => void;
+  readonly onCreateSkill: (name: string, description: string, content: string) => void;
   readonly onClose: () => void;
 }
 
@@ -15,12 +15,18 @@ export const CreateSkillDialog: FC<CreateSkillDialogProps> = ({
 
   const isValid = name.trim().length > 0;
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
   const handleSubmit = () => {
     if (!isValid) return;
     const slug = name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-    const fullContent =
-      `---\nname: ${slug}\ndescription: "${description.trim()}"\n---\n\n${content.trim()}`;
-    onCreateSkill(slug, fullContent);
+    onCreateSkill(slug, description.trim(), content.trim());
   };
 
   return (
@@ -34,6 +40,9 @@ export const CreateSkillDialog: FC<CreateSkillDialogProps> = ({
 
       {/* Dialog */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-skill-title"
         className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 rounded-lg shadow-2xl z-50 border"
         style={{
           background: "var(--cp-surface)",
@@ -45,13 +54,14 @@ export const CreateSkillDialog: FC<CreateSkillDialogProps> = ({
           className="flex items-center justify-between px-4 py-3 border-b"
           style={{ borderColor: "var(--cp-border)" }}
         >
-          <h3 className="text-sm font-semibold" style={{ color: "var(--cp-text)" }}>
+          <h3 id="create-skill-title" className="text-sm font-semibold" style={{ color: "var(--cp-text)" }}>
             New Skill
           </h3>
           <button
             className="w-5 h-5 flex items-center justify-center rounded transition-colors"
             style={{ color: "var(--cp-text-muted)" }}
             onClick={onClose}
+            aria-label="Close dialog"
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18" />

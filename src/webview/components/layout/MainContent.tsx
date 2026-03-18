@@ -1,7 +1,6 @@
 import { type FC, useState } from "react";
 import { SkillDetail } from "../skill/SkillDetail";
 import { SyncDialog } from "../skill/SyncDialog";
-import { SearchInput } from "../common/SearchInput";
 import type { Skill } from "../../hooks/useSkills";
 import type { AgentInfo } from "../../hooks/useAgents";
 
@@ -10,8 +9,6 @@ interface MainContentProps {
   readonly agents: readonly AgentInfo[];
   readonly onSync: (skillName: string, targetAgents: string[]) => void;
   readonly onBatchSync: (skillNames: string[], targetAgents: string[]) => void;
-  readonly searchQuery: string;
-  readonly onSearchChange: (query: string) => void;
   readonly onBatchDelete: () => void;
   readonly onDiffRequest: (skillName: string) => void;
   readonly onShowHistory: () => void;
@@ -26,8 +23,6 @@ export const MainContent: FC<MainContentProps> = ({
   agents,
   onSync,
   onBatchSync,
-  searchQuery,
-  onSearchChange,
   onBatchDelete,
   onDiffRequest,
   onShowHistory,
@@ -162,13 +157,6 @@ export const MainContent: FC<MainContentProps> = ({
           )}
         </div>
 
-        <div className="w-56">
-          <SearchInput
-            value={searchQuery}
-            onChange={onSearchChange}
-            placeholder="Search skills..."
-          />
-        </div>
       </div>
 
       {/* Main content area */}
