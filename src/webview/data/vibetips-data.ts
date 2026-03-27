@@ -70,6 +70,26 @@ export const FRAMEWORKS: readonly Framework[] = [
     description: "Terminal multi-agent manager. tmux + git worktree isolation, supports Claude Code / Codex / Aider.",
     url: "https://github.com/smtg-ai/claude-squad",
   },
+  {
+    name: "oh-my-claudecode",
+    stars: "4.8K",
+    description: "Multi-agent orchestration layer: autopilot, ralph, ultrawork, team mode + 20 specialist agents.",
+    url: "https://github.com/nicobailey/oh-my-claudecode",
+    install: "/install oh-my-claudecode",
+  },
+  {
+    name: "viwo-cli",
+    stars: "3.2K",
+    description: "Visual worktree manager. Branch isolation with TUI, auto-cleanup, IDE integration.",
+    url: "https://github.com/nicobailey/viwo-cli",
+  },
+  {
+    name: "Aider",
+    stars: "27K",
+    description: "AI pair programming in your terminal. Git-aware, multi-model, supports Claude/GPT/Gemini.",
+    url: "https://github.com/paul-gauthier/aider",
+    install: "pip install aider-chat",
+  },
 ];
 
 export const TIPS: readonly Tip[] = [
@@ -120,6 +140,30 @@ export const TIPS: readonly Tip[] = [
     emoji: "\u{1F916}",
     summary: "Split complex tasks to specialized sub-agents with isolated context.",
     detail: "Each sub-agent has independent context — no cross-contamination. Superpowers and claude-swarm natively support sub-agent orchestration.",
+  },
+  {
+    title: "Headless Browser Testing",
+    emoji: "\u{1F310}",
+    summary: "Use Playwright MCP to verify UI changes visually — screenshot and interact.",
+    detail: "Playwright MCP provides 22 tools: navigate, click, fill, screenshot, evaluate. Verify your UI changes are correct without leaving the terminal.",
+  },
+  {
+    title: "Skill Composition",
+    emoji: "\u{1F9F1}",
+    summary: "Combine small focused skills instead of one monolithic prompt.",
+    detail: "Keep each skill under 500 lines with a single responsibility. Chain them via sub-agent calls or sequential invocation. Easier to test, version, and reuse.",
+  },
+  {
+    title: "MCP Server Discovery",
+    emoji: "\u{1F50D}",
+    summary: "Use Code Patch to scan and inventory all MCP servers across your agents.",
+    detail: "Code Patch scans 5 known config locations (Claude, Cursor, Windsurf, etc.) to show all MCP servers in one view. Helps avoid duplicate or conflicting server configs.",
+  },
+  {
+    title: "Diff Before Sync",
+    emoji: "\u{1F4CA}",
+    summary: "Always review skill differences across agents before syncing.",
+    detail: "Different agents may have diverged copies of the same skill. Code Patch's diff engine shows content differences across all agents so you can sync the right version.",
   },
 ];
 
@@ -261,6 +305,40 @@ export const FEATURED_SKILLS: readonly Featured[] = [
     description: "Build beautiful HTML Artifacts with React + Tailwind + shadcn/ui.",
     tags: ["react", "tailwind", "html"],
     category: "Frontend",
+  },
+  {
+    name: "oh-my-claudecode",
+    description: "Multi-agent orchestration: autopilot, ralph persistence loop, ultrawork parallel exec, team mode.",
+    stars: "4.8K",
+    tags: ["orchestration", "multi-agent", "workflow"],
+    url: "https://github.com/nicobailey/oh-my-claudecode",
+    category: "Workflow",
+  },
+  {
+    name: "claude-engineer",
+    description: "Full-stack development agent with file operations, web search, and code analysis.",
+    stars: "520",
+    tags: ["full-stack", "agent"],
+    category: "Workflow",
+  },
+  {
+    name: "cursor-rules-generator",
+    description: "Auto-generate .cursorrules from your codebase patterns and conventions.",
+    stars: "380",
+    tags: ["cursor", "rules", "automation"],
+    category: "Meta",
+  },
+  {
+    name: "react-component-skill",
+    description: "Generate production-grade React components with TypeScript, tests, and Storybook stories.",
+    tags: ["react", "typescript", "components"],
+    category: "Frontend",
+  },
+  {
+    name: "docker-compose-skill",
+    description: "Generate and manage Docker Compose configurations with best practices.",
+    tags: ["docker", "devops", "infrastructure"],
+    category: "DevOps",
   },
 ];
 
@@ -418,5 +496,42 @@ export const FEATURED_MCPS: readonly Featured[] = [
     description: "\"God mode\": terminal access + process management + ripgrep search.",
     tags: ["terminal", "filesystem"],
     category: "Dev Tools",
+  },
+  {
+    name: "Linear MCP",
+    description: "Issue tracking integration — create, update, search issues and projects.",
+    tags: ["project-management", "issues"],
+    category: "Productivity",
+  },
+  {
+    name: "Sentry MCP",
+    description: "Error monitoring — query issues, stack traces, and performance data.",
+    tags: ["monitoring", "errors", "debugging"],
+    category: "Dev Tools",
+  },
+  {
+    name: "Vercel MCP",
+    description: "Deploy previews, manage projects, check build logs from your agent.",
+    tags: ["deployment", "vercel", "hosting"],
+    category: "Cloud",
+  },
+  {
+    name: "Stripe MCP",
+    description: "Payment integration — manage products, prices, subscriptions, and invoices.",
+    tags: ["payments", "stripe", "fintech"],
+    category: "AI & Automation",
+  },
+  {
+    name: "Puppeteer MCP",
+    description: "Headless Chrome automation — navigate, screenshot, evaluate JS in pages.",
+    stars: "3.8K",
+    tags: ["browser", "automation", "chrome"],
+    category: "Browser",
+  },
+  {
+    name: "Obsidian MCP",
+    description: "Read, search, and write notes in Obsidian vaults for knowledge management.",
+    tags: ["notes", "knowledge", "obsidian"],
+    category: "Productivity",
   },
 ];

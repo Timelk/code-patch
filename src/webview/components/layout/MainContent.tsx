@@ -3,6 +3,7 @@ import { SkillDetail } from "../skill/SkillDetail";
 import { SyncDialog } from "../skill/SyncDialog";
 import type { Skill, Scope } from "../../hooks/useSkills";
 import type { AgentInfo } from "../../hooks/useAgents";
+import { useI18n } from "../../i18n";
 
 interface MainContentProps {
   readonly selectedSkill: Skill | null;
@@ -32,6 +33,7 @@ export const MainContent: FC<MainContentProps> = ({
   onCheckAgentsForSync,
 }) => {
   const [showSyncDialog, setShowSyncDialog] = useState(false);
+  const { t } = useI18n();
 
   const hasBatchSelection = multiSelect && selectedSkillNames.size > 0;
 
@@ -70,7 +72,7 @@ export const MainContent: FC<MainContentProps> = ({
                 <path d="M23 4v6h-6M1 20v-6h6" />
                 <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
               </svg>
-              {hasBatchSelection ? `Sync (${selectedSkillNames.size})` : "Sync"}
+              {hasBatchSelection ? `${t("main.sync")} (${selectedSkillNames.size})` : t("main.sync")}
             </button>
 
             {showSyncDialog && (selectedSkill || hasBatchSelection) && (
@@ -100,13 +102,13 @@ export const MainContent: FC<MainContentProps> = ({
               color: "var(--cp-text-muted)",
             }}
             onClick={onShowHistory}
-            title="Sync history"
+            title={t("main.history")}
           >
             <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="10" />
               <polyline points="12 6 12 12 16 14" />
             </svg>
-            History
+            {t("main.history")}
           </button>
 
           {/* Delete button — visible in multi-select mode */}
@@ -132,7 +134,7 @@ export const MainContent: FC<MainContentProps> = ({
                 <polyline points="3 6 5 6 21 6" />
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
               </svg>
-              Delete ({selectedSkillNames.size})
+              {t("ctx.delete")} ({selectedSkillNames.size})
             </button>
           )}
         </div>
@@ -154,14 +156,14 @@ export const MainContent: FC<MainContentProps> = ({
                   <polyline points="8 6 2 12 8 18" />
                 </svg>
               </div>
-              <p className="text-sm font-medium mb-1">Select a skill to view details</p>
+              <p className="text-sm font-medium mb-1">{t("main.emptyTitle")}</p>
               {multiSelect ? (
                 <p className="text-xs" style={{ opacity: 0.7 }}>
-                  Use checkboxes to select skills for batch sync or delete
+                  {t("main.emptyMultiHint")}
                 </p>
               ) : (
                 <p className="text-xs" style={{ opacity: 0.7 }}>
-                  Click on a skill in the sidebar to get started
+                  {t("main.emptyHint")}
                 </p>
               )}
             </div>

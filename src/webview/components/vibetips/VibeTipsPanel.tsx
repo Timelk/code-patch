@@ -2,20 +2,21 @@ import { type FC, useState, useRef, useEffect } from "react";
 import { VibeTipsHots } from "./VibeTipsHots";
 import { VibeTipsSkills } from "./VibeTipsSkills";
 import { VibeTipsMCPs } from "./VibeTipsMCPs";
+import { useI18n } from "../../i18n";
 
 type VibeTipsTab = "hots" | "skills" | "mcps";
-
-const TABS: readonly { key: VibeTipsTab; label: string; icon: string }[] = [
-  { key: "hots", label: "Hots", icon: "\u{1F525}" },
-  { key: "skills", label: "Skills", icon: "\u{1F4E6}" },
-  { key: "mcps", label: "MCPs", icon: "\u{1F50C}" },
-];
 
 interface VibeTipsPanelProps {
   readonly onOpenUrl: (url: string) => void;
 }
 
 export const VibeTipsPanel: FC<VibeTipsPanelProps> = ({ onOpenUrl }) => {
+  const { t } = useI18n();
+  const TABS: readonly { key: VibeTipsTab; label: string; icon: string }[] = [
+    { key: "hots", label: t("vt.hots"), icon: "\u{1F525}" },
+    { key: "skills", label: t("vt.skills"), icon: "\u{1F4E6}" },
+    { key: "mcps", label: t("vt.mcps"), icon: "\u{1F50C}" },
+  ];
   const [activeTab, setActiveTab] = useState<VibeTipsTab>("hots");
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
   const [contentVisible, setContentVisible] = useState(true);

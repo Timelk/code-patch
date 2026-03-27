@@ -3,12 +3,14 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Skill } from "../../hooks/useSkills";
 import { postMessage } from "../../services/vscode-message";
+import { useI18n } from "../../i18n";
 
 interface SkillDetailProps {
   readonly skill: Skill;
 }
 
 export const SkillDetail: FC<SkillDetailProps> = ({ skill }) => {
+  const { t } = useI18n();
   const handleOpenInEditor = () => {
     postMessage({
       type: "skill:openInEditor",
@@ -44,7 +46,7 @@ export const SkillDetail: FC<SkillDetailProps> = ({ skill }) => {
               <polyline points="15 3 21 3 21 9" />
               <line x1="10" y1="14" x2="21" y2="3" />
             </svg>
-            Edit
+            {t("detail.edit")}
           </button>
         </div>
 
@@ -67,7 +69,7 @@ export const SkillDetail: FC<SkillDetailProps> = ({ skill }) => {
               className="px-1.5 py-0.5 rounded"
               style={{ background: "rgba(14, 99, 156, 0.2)", color: "var(--cp-primary)" }}
             >
-              symlink
+              {t("detail.symlink")}
             </span>
           )}
         </div>
@@ -90,7 +92,7 @@ export const SkillDetail: FC<SkillDetailProps> = ({ skill }) => {
               color: "var(--cp-text-muted)",
             }}
           >
-            Prompt Template
+            {t("detail.promptTemplate")}
           </div>
           <pre className="whitespace-pre-wrap" style={{ color: "var(--cp-success)" }}>
             {skill.content.slice(0, 500)}

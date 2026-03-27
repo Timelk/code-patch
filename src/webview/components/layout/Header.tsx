@@ -3,6 +3,7 @@ import { AgentTabs } from "../agent/AgentTabs";
 import { ScopeToggle } from "../common/ScopeToggle";
 import type { Scope } from "../../hooks/useSkills";
 import type { AgentInfo } from "../../hooks/useAgents";
+import { useI18n } from "../../i18n";
 
 type SkillSource = "local" | "vibetips";
 
@@ -29,6 +30,7 @@ export const Header: FC<HeaderProps> = ({
   source,
   onSourceChange,
 }) => {
+  const { t } = useI18n();
   return (
     <header className="shrink-0 border-b" style={{ borderColor: "var(--cp-border)", background: "var(--cp-surface)" }}>
       {/* Top bar */}
@@ -57,7 +59,7 @@ export const Header: FC<HeaderProps> = ({
               e.currentTarget.style.color = "var(--cp-text-muted)";
             }}
             onClick={onRefresh}
-            title="Refresh skills"
+            title={t("header.refresh")}
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M23 4v6h-6" />
@@ -77,7 +79,7 @@ export const Header: FC<HeaderProps> = ({
               e.currentTarget.style.color = "var(--cp-text-muted)";
             }}
             onClick={onOpenSettings}
-            title="Extension Settings"
+            title={t("header.settings")}
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3" />
@@ -109,7 +111,7 @@ export const Header: FC<HeaderProps> = ({
               }}
               onClick={() => onSourceChange("local")}
             >
-              Local
+              {t("header.local")}
             </button>
             <button
               className="px-2.5 py-0.5 rounded text-[11px] font-semibold transition-all flex items-center gap-1"

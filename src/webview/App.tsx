@@ -11,6 +11,7 @@ import { SyncHistory, type SyncHistoryEntry } from "./components/skill/SyncHisto
 import { SyncDialog } from "./components/skill/SyncDialog";
 import { SettingsPanel } from "./components/settings/SettingsPanel";
 import { VibeTipsPanel } from "./components/vibetips/VibeTipsPanel";
+import { I18nProvider, type Locale } from "./i18n";
 import { useSkills } from "./hooks/useSkills";
 import { useAgents, type AgentInfo } from "./hooks/useAgents";
 import { useVSCodeApi } from "./hooks/useVSCodeApi";
@@ -44,7 +45,8 @@ type ExtensionMessage =
   | { type: "history:loaded"; payload: SyncHistoryEntry[] }
   | { type: "skill:agentsWithSkill"; payload: string[] }
   | { type: "error:occurred"; payload: { operation: string; message: string } }
-  | { type: "agents:allLoaded"; payload: (AgentInfo & { enabled: boolean })[] };
+  | { type: "agents:allLoaded"; payload: (AgentInfo & { enabled: boolean })[] }
+  | { type: "language:loaded"; payload: { language: string } };
 
 export const App: FC = () => {
   const {
@@ -108,6 +110,9 @@ export const App: FC = () => {
   const [allAgentsWithEnabled, setAllAgentsWithEnabled] = useState<
     readonly (AgentInfo & { enabled: boolean })[]
   >([]);
+
+  // Language (i18n)
+  const [locale, setLocale] = useState<Locale>("en");
 
   // Data source: local vs vibetips — elevated to App level, controlled by Header toggle
   const [source, setSource] = useState<"local" | "vibetips">("local");
@@ -201,6 +206,9 @@ export const App: FC = () => {
         case "agents:allLoaded":
           setAllAgentsWithEnabled(message.payload);
           break;
+        case "language:loaded":
+          setLocale(message.payload.language as Locale);
+          break;
       }
     },
     [handleSkillsLoaded, handleAgentsDetected, scope, agentFilter, multiSelect]
@@ -208,9 +216,10 @@ export const App: FC = () => {
 
   useVSCodeApi(handleExtensionMessage);
 
-  // Signal ready to extension host
+  // Signal ready to extension host and load language preference
   useEffect(() => {
     postMessage({ type: "webview:ready" });
+    postMessage({ type: "language:load" });
   }, []);
 
   // ─── Handlers ──────────────────────────────────────────────────────
@@ -382,6 +391,11 @@ export const App: FC = () => {
     postMessage({ type: "agent:toggle", payload: { agentName, enabled } });
   }, []);
 
+  const handleLanguageChange = useCallback((lang: Locale) => {
+    setLocale(lang);
+    postMessage({ type: "language:set", payload: { language: lang } });
+  }, []);
+
   const handleSidebarResize = useCallback((deltaX: number) => {
     setSidebarWidth((prev) => Math.max(160, Math.min(400, prev + deltaX)));
   }, []);
@@ -393,6 +407,7 @@ export const App: FC = () => {
   // ─── Render ────────────────────────────────────────────────────────
 
   return (
+    <I18nProvider initialLocale={locale} key={locale}>
     <div className="flex flex-col h-full">
       <Header
         scope={scope}
@@ -513,6 +528,8 @@ export const App: FC = () => {
         <SettingsPanel
           allAgents={allAgentsWithEnabled}
           onAgentToggle={handleAgentToggle}
+          locale={locale}
+          onLanguageChange={handleLanguageChange}
           onClose={() => setShowSettings(false)}
         />
       )}
@@ -554,5 +571,6 @@ export const App: FC = () => {
         </div>
       )}
     </div>
+    </I18nProvider>
   );
 };

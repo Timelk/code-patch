@@ -66,6 +66,12 @@
             }
           }
         }
+      },
+      "codePatch.language": {
+        "type": "string",
+        "enum": ["en", "zh"],
+        "default": "en",
+        "description": "Interface display language (English / 中文)."
       }
     }
   },

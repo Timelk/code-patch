@@ -1,6 +1,7 @@
 import { type FC } from "react";
 import { AgentStatusBadge } from "../agent/AgentStatusBadge";
 import type { AgentInfo } from "../../hooks/useAgents";
+import { useI18n } from "../../i18n";
 
 export interface SyncStats {
   readonly totalSyncs: number;
@@ -28,6 +29,7 @@ function formatRelativeTime(timestamp: number): string {
 
 export const RightPanel: FC<RightPanelProps> = ({ agents, skillCount, syncStats }) => {
   const installedAgents = agents.filter((a) => a.installed);
+  const { t } = useI18n();
 
   return (
     <aside
@@ -43,14 +45,14 @@ export const RightPanel: FC<RightPanelProps> = ({ agents, skillCount, syncStats 
           className="text-[10px] font-bold uppercase tracking-wider mb-2 px-1"
           style={{ color: "var(--cp-text-muted)" }}
         >
-          Overview
+          {t("right.overview")}
         </h3>
         <div className="grid grid-cols-2 gap-1.5">
-          <StatCard label="Skills" value={String(skillCount)} />
-          <StatCard label="Agents" value={String(installedAgents.length)} />
-          <StatCard label="Syncs" value={String(syncStats.totalSyncs)} />
+          <StatCard label={t("right.skills")} value={String(skillCount)} />
+          <StatCard label={t("right.agents")} value={String(installedAgents.length)} />
+          <StatCard label={t("right.syncs")} value={String(syncStats.totalSyncs)} />
           <StatCard
-            label="Last Sync"
+            label={t("right.lastSync")}
             value={syncStats.lastSyncTime ? formatRelativeTime(syncStats.lastSyncTime) : "—"}
           />
         </div>
@@ -63,9 +65,9 @@ export const RightPanel: FC<RightPanelProps> = ({ agents, skillCount, syncStats 
               color: "var(--cp-text-muted)",
             }}
           >
-            Last: <span style={{ color: "var(--cp-text)" }}>{syncStats.lastSyncSkillName}</span>
+            {t("right.last")} <span style={{ color: "var(--cp-text)" }}>{syncStats.lastSyncSkillName}</span>
             {" → "}
-            {syncStats.lastSyncAgentCount} agent{syncStats.lastSyncAgentCount !== 1 ? "s" : ""}
+            {syncStats.lastSyncAgentCount} {syncStats.lastSyncAgentCount !== 1 ? t("right.agents_plural") : t("right.agent")}
           </div>
         )}
       </div>
@@ -76,13 +78,13 @@ export const RightPanel: FC<RightPanelProps> = ({ agents, skillCount, syncStats 
           className="text-[10px] font-bold uppercase tracking-wider mb-2 px-1"
           style={{ color: "var(--cp-text-muted)" }}
         >
-          Active Features
+          {t("right.activeFeatures")}
         </h3>
         <div className="space-y-1.5">
-          <FeatureRow name="Context Awareness" description="Auto-includes imported file refs" active />
-          <FeatureRow name="Copy Sync" description="Safe cross-platform copy-based sync" active />
-          <FeatureRow name="File Watcher" description="Auto-refresh on SKILL.md changes" active />
-          <FeatureRow name="MCP Discovery" description="Scans agent MCP configurations" active />
+          <FeatureRow name={t("right.contextAwareness")} description={t("right.contextAwarenessDesc")} active />
+          <FeatureRow name={t("right.copySync")} description={t("right.copySyncDesc")} active />
+          <FeatureRow name={t("right.fileWatcher")} description={t("right.fileWatcherDesc")} active />
+          <FeatureRow name={t("right.mcpDiscovery")} description={t("right.mcpDiscoveryDesc")} active />
         </div>
       </div>
 
@@ -92,7 +94,7 @@ export const RightPanel: FC<RightPanelProps> = ({ agents, skillCount, syncStats 
           className="text-[10px] font-bold uppercase tracking-wider mb-2 px-1"
           style={{ color: "var(--cp-text-muted)" }}
         >
-          Detected Agents ({installedAgents.length})
+          {t("right.detectedAgents")} ({installedAgents.length})
         </h3>
         <div className="space-y-1">
           {agents.map((agent) => (

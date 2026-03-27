@@ -1,4 +1,5 @@
 import { type FC, useEffect } from "react";
+import { useI18n } from "../../i18n";
 
 export interface SyncHistoryEntry {
   readonly id: string;
@@ -30,6 +31,7 @@ export const SyncHistory: FC<SyncHistoryProps> = ({ entries, onClose, onClear })
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
+  const { t } = useI18n();
 
   return (
     <>
@@ -57,7 +59,7 @@ export const SyncHistory: FC<SyncHistoryProps> = ({ entries, onClose, onClear })
           style={{ borderColor: "var(--cp-border)" }}
         >
           <h3 id="sync-history-title" className="text-sm font-semibold" style={{ color: "var(--cp-text)" }}>
-            Sync History
+            {t("history.title")}
           </h3>
           <div className="flex items-center gap-2">
             {entries.length > 0 && (
@@ -66,7 +68,7 @@ export const SyncHistory: FC<SyncHistoryProps> = ({ entries, onClose, onClear })
                 style={{ color: "var(--cp-error)", border: "1px solid var(--cp-border)" }}
                 onClick={onClear}
               >
-                Clear All
+                {t("history.clear")}
               </button>
             )}
             <button
@@ -87,7 +89,7 @@ export const SyncHistory: FC<SyncHistoryProps> = ({ entries, onClose, onClear })
         <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
           {entries.length === 0 ? (
             <p className="text-xs text-center py-8" style={{ color: "var(--cp-text-muted)" }}>
-              No sync history yet
+              {t("history.empty")}
             </p>
           ) : (
             entries.map((entry) => (

@@ -1,6 +1,7 @@
 import { type FC, useEffect } from "react";
 import type { AgentInfo } from "../../hooks/useAgents";
 import { postMessage } from "../../services/vscode-message";
+import { useI18n, type Locale } from "../../i18n";
 
 interface AllAgentInfo extends AgentInfo {
   readonly enabled: boolean;
@@ -10,12 +11,15 @@ interface SettingsPanelProps {
   readonly allAgents: readonly AllAgentInfo[];
   readonly onAgentToggle: (agentName: string, enabled: boolean) => void;
   readonly onClose: () => void;
+  readonly locale: Locale;
+  readonly onLanguageChange: (locale: Locale) => void;
 }
 
 /**
  * Settings panel overlay with agent toggle switches and extension info.
  */
-export const SettingsPanel: FC<SettingsPanelProps> = ({ allAgents, onAgentToggle, onClose }) => {
+export const SettingsPanel: FC<SettingsPanelProps> = ({ allAgents, onAgentToggle, onClose, locale, onLanguageChange }) => {
+  const { t } = useI18n();
   const installedCount = allAgents.filter((a) => a.installed).length;
   const enabledCount = allAgents.filter((a) => a.enabled).length;
 
@@ -62,7 +66,7 @@ export const SettingsPanel: FC<SettingsPanelProps> = ({ allAgents, onAgentToggle
               </svg>
             </div>
             <h2 id="settings-title" className="text-sm font-bold" style={{ color: "var(--cp-text)" }}>
-              Settings
+              {t("settings.title")}
             </h2>
           </div>
           <button
@@ -88,7 +92,7 @@ export const SettingsPanel: FC<SettingsPanelProps> = ({ allAgents, onAgentToggle
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           {/* Agents Section */}
           <SettingsSection
-            title="Agents"
+            title={t("settings.agents")}
             badge={`${enabledCount} enabled · ${installedCount} installed`}
           >
             <div className="space-y-1">
@@ -122,7 +126,7 @@ export const SettingsPanel: FC<SettingsPanelProps> = ({ allAgents, onAgentToggle
                         {agent.displayName}
                       </div>
                       <div className="text-[10px] mt-0.5" style={{ color: "var(--cp-text-muted)" }}>
-                        {agent.installed ? "Installed" : "Not found"}
+                        {agent.installed ? t("settings.installed") : t("settings.notFound")}
                       </div>
                     </div>
                   </div>
@@ -136,30 +140,75 @@ export const SettingsPanel: FC<SettingsPanelProps> = ({ allAgents, onAgentToggle
           </SettingsSection>
 
           {/* Sync Section */}
-          <SettingsSection title="Sync">
+          <SettingsSection title={t("settings.sync")}>
             <SettingsRow
-              label="Sync Mode"
-              description="How skills are synced to agent directories"
-              value="Copy"
+              label={t("settings.syncMode")}
+              description={t("settings.syncModeDesc")}
+              value={t("settings.copy")}
             />
             <SettingsRow
-              label="Active Agents"
-              description="Number of agents detected on this machine"
+              label={t("settings.activeAgents")}
+              description={t("settings.activeAgentsDesc")}
               value={`${enabledCount} / ${allAgents.length}`}
             />
           </SettingsSection>
 
+          {/* Language Section */}
+          <SettingsSection title={t("settings.language")}>
+            <div
+              className="flex items-center justify-between px-3 py-2.5 rounded-md border"
+              style={{
+                background: "var(--cp-bg)",
+                borderColor: "var(--cp-border)",
+              }}
+            >
+              <div>
+                <div className="text-xs font-medium" style={{ color: "var(--cp-text)" }}>
+                  {t("settings.language")}
+                </div>
+                <div className="text-[10px] mt-0.5" style={{ color: "var(--cp-text-muted)" }}>
+                  {t("settings.languageDesc")}
+                </div>
+              </div>
+              <div
+                className="flex p-0.5 rounded"
+                style={{ background: "var(--cp-input-bg)" }}
+              >
+                <button
+                  className="px-2 py-1 rounded text-[11px] font-medium transition-all duration-150"
+                  style={{
+                    background: locale === "en" ? "var(--cp-primary)" : "transparent",
+                    color: locale === "en" ? "var(--cp-primary-fg)" : "var(--cp-text-muted)",
+                  }}
+                  onClick={() => onLanguageChange("en")}
+                >
+                  English
+                </button>
+                <button
+                  className="px-2 py-1 rounded text-[11px] font-medium transition-all duration-150"
+                  style={{
+                    background: locale === "zh" ? "var(--cp-primary)" : "transparent",
+                    color: locale === "zh" ? "var(--cp-primary-fg)" : "var(--cp-text-muted)",
+                  }}
+                  onClick={() => onLanguageChange("zh")}
+                >
+                  中文
+                </button>
+              </div>
+            </div>
+          </SettingsSection>
+
           {/* About Section */}
-          <SettingsSection title="About">
+          <SettingsSection title={t("settings.about")}>
             <SettingsRow
-              label="Extension"
-              description="Code Patch — AI agent skill manager"
-              value="v0.2.0"
+              label={t("settings.extension")}
+              description={t("settings.extensionDesc")}
+              value={t("settings.version")}
             />
             <SettingsRow
-              label="Sync Engine"
-              description="Copy-based sync for cross-platform safety"
-              value="Copy"
+              label={t("settings.syncEngine")}
+              description={t("settings.syncEngineDesc")}
+              value={t("settings.copy")}
             />
           </SettingsSection>
         </div>
@@ -187,7 +236,7 @@ export const SettingsPanel: FC<SettingsPanelProps> = ({ allAgents, onAgentToggle
               <polyline points="16 18 22 12 16 6" />
               <polyline points="8 6 2 12 8 18" />
             </svg>
-            Open JSON Settings
+            {t("settings.openJson")}
           </button>
           <button
             className="px-4 py-1.5 rounded text-xs font-medium transition-colors duration-150"
@@ -203,7 +252,7 @@ export const SettingsPanel: FC<SettingsPanelProps> = ({ allAgents, onAgentToggle
             }}
             onClick={onClose}
           >
-            Done
+            {t("settings.done")}
           </button>
         </div>
       </div>

@@ -368,6 +368,19 @@ export class DashboardPanel {
         break;
       }
 
+      case "language:load": {
+        const lang = vscode.workspace.getConfiguration("codePatch").get<string>("language") ?? "en";
+        this.postMessage({ type: "language:loaded", payload: { language: lang } });
+        break;
+      }
+
+      case "language:set": {
+        const newLang = message.payload.language;
+        await vscode.workspace.getConfiguration("codePatch").update("language", newLang, vscode.ConfigurationTarget.Global);
+        this.postMessage({ type: "language:loaded", payload: { language: newLang } });
+        break;
+      }
+
       case "agents:loadAll": {
         const allAgents = await detectAllAgents();
         this.postMessage({ type: "agents:allLoaded", payload: allAgents });

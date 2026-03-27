@@ -1,4 +1,5 @@
 import { type FC, useState, useRef, useEffect, useCallback } from "react";
+import { useI18n } from "../../i18n";
 import { SkillList } from "../skill/SkillList";
 import { SearchInput } from "../common/SearchInput";
 import { McpList, type McpServer } from "../mcp/McpList";
@@ -48,6 +49,7 @@ export const Sidebar: FC<SidebarProps> = ({
   onSyncSkill,
   showBadge,
 }) => {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<SidebarTab>("skills");
   const containerRef = useRef<HTMLDivElement>(null);
   const skillsTabRef = useRef<HTMLButtonElement>(null);
@@ -102,7 +104,7 @@ export const Sidebar: FC<SidebarProps> = ({
           }}
           onClick={() => handleTabChange("skills")}
         >
-          Skills
+          {t("sidebar.skills")}
         </button>
         <button
           ref={mcpsTabRef}
@@ -113,7 +115,7 @@ export const Sidebar: FC<SidebarProps> = ({
           }}
           onClick={() => handleTabChange("mcps")}
         >
-          MCPs
+          {t("sidebar.mcps")}
         </button>
         {/* Sliding underline */}
         {underline.ready && (
@@ -135,7 +137,7 @@ export const Sidebar: FC<SidebarProps> = ({
               <SearchInput
                 value={searchQuery}
                 onChange={onSearchChange}
-                placeholder="Search skills..."
+                placeholder={t("sidebar.search")}
               />
             </div>
             <button
@@ -146,7 +148,7 @@ export const Sidebar: FC<SidebarProps> = ({
                 border: multiSelect ? "none" : "1px solid var(--cp-border)",
               }}
               onClick={onToggleMultiSelect}
-              title={multiSelect ? "Exit multi-select" : "Multi-select"}
+              title={multiSelect ? t("sidebar.exitMultiSelect") : t("sidebar.multiSelect")}
             >
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polyline points="9 11 12 14 22 4" />
@@ -166,7 +168,7 @@ export const Sidebar: FC<SidebarProps> = ({
                 e.currentTarget.style.background = "var(--cp-primary)";
               }}
               onClick={onCreateSkill}
-              title="New Skill"
+              title={t("sidebar.newSkill")}
             >
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <line x1="12" y1="5" x2="12" y2="19" />
@@ -177,7 +179,7 @@ export const Sidebar: FC<SidebarProps> = ({
           <div className="flex-1 overflow-y-auto px-1 pb-2">
             {loading ? (
               <div className="p-3 text-xs text-center" style={{ color: "var(--cp-text-muted)" }}>
-                Loading...
+                {t("sidebar.loading")}
               </div>
             ) : (
               <SkillList

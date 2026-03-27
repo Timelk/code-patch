@@ -1,12 +1,14 @@
 import { type FC, useState } from "react";
 import { VibeTipsCard } from "./VibeTipsCard";
 import { FRAMEWORKS, TIPS } from "../../data/vibetips-data";
+import { useI18n } from "../../i18n";
 
 interface VibeTipsHotsProps {
   readonly onOpenUrl: (url: string) => void;
 }
 
 export const VibeTipsHots: FC<VibeTipsHotsProps> = ({ onOpenUrl }) => {
+  const { t } = useI18n();
   const [expandedTip, setExpandedTip] = useState<number | null>(null);
 
   const hero = FRAMEWORKS[0]; // Superpowers
@@ -56,7 +58,7 @@ export const VibeTipsHots: FC<VibeTipsHotsProps> = ({ onOpenUrl }) => {
       {/* Vibe Coding Tips */}
       <section>
         <h3 className="text-xs font-bold uppercase tracking-wider mb-3 px-1" style={{ color: "var(--cp-text-muted)" }}>
-          Vibe Coding Tips
+          {t("vt.tips")}
         </h3>
         <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
           {TIPS.map((tip, i) => (
@@ -96,7 +98,7 @@ export const VibeTipsHots: FC<VibeTipsHotsProps> = ({ onOpenUrl }) => {
       {/* Hot Frameworks */}
       <section>
         <h3 className="text-xs font-bold uppercase tracking-wider mb-3 px-1" style={{ color: "var(--cp-text-muted)" }}>
-          Hot Frameworks & Tools
+          {t("vt.frameworks")}
         </h3>
         <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}>
           {FRAMEWORKS.slice(1).map((fw, i) => (

@@ -1,4 +1,5 @@
 import { type FC } from "react";
+import { useI18n } from "../../i18n";
 
 export interface McpServer {
   readonly name: string;
@@ -14,10 +15,11 @@ interface McpListProps {
 }
 
 export const McpList: FC<McpListProps> = ({ servers, loading }) => {
+  const { t } = useI18n();
   if (loading) {
     return (
       <div className="p-3 text-xs text-center" style={{ color: "var(--cp-text-muted)" }}>
-        Scanning...
+        {t("mcp.scanning")}
       </div>
     );
   }
@@ -25,7 +27,7 @@ export const McpList: FC<McpListProps> = ({ servers, loading }) => {
   if (servers.length === 0) {
     return (
       <div className="p-3 text-xs text-center" style={{ color: "var(--cp-text-muted)" }}>
-        No MCP servers found
+        {t("mcp.noServers")}
       </div>
     );
   }

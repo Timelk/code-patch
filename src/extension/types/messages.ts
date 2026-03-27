@@ -56,7 +56,8 @@ export type ExtensionMessage =
   | { readonly type: "history:loaded"; readonly payload: readonly SyncHistoryEntry[] }
   | { readonly type: "skill:agentsWithSkill"; readonly payload: readonly string[] }
   | { readonly type: "error:occurred"; readonly payload: { readonly operation: string; readonly message: string } }
-  | { readonly type: "agents:allLoaded"; readonly payload: readonly (AgentInfo & { readonly enabled: boolean })[] };
+  | { readonly type: "agents:allLoaded"; readonly payload: readonly (AgentInfo & { readonly enabled: boolean })[] }
+  | { readonly type: "language:loaded"; readonly payload: { readonly language: string } };
 
 // ─── Webview → Extension ───────────────────────────────────────────
 
@@ -114,7 +115,9 @@ export type WebviewMessage =
   | { readonly type: "settings:open" }
   | { readonly type: "agents:loadAll" }
   | { readonly type: "agent:toggle"; readonly payload: { readonly agentName: string; readonly enabled: boolean } }
-  | { readonly type: "url:open"; readonly payload: { readonly url: string } };
+  | { readonly type: "url:open"; readonly payload: { readonly url: string } }
+  | { readonly type: "language:set"; readonly payload: { readonly language: string } }
+  | { readonly type: "language:load" };
 
 export type Scope = "global" | "project";
 

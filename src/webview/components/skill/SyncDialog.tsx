@@ -1,6 +1,7 @@
 import { type FC, useState, useEffect } from "react";
 import type { AgentInfo } from "../../hooks/useAgents";
 import type { Scope } from "../../hooks/useSkills";
+import { useI18n } from "../../i18n";
 
 interface SyncDialogProps {
   readonly skillName: string;
@@ -22,6 +23,7 @@ export const SyncDialog: FC<SyncDialogProps> = ({
   onClose,
   centered = false,
 }) => {
+  const { t } = useI18n();
   // Only show installed agents that do NOT already have this skill
   const availableAgents = agents.filter(
     (a) => a.installed && !agentsWithSkill.has(a.name)
@@ -74,12 +76,12 @@ export const SyncDialog: FC<SyncDialogProps> = ({
   const dialogContent = (
     <>
       <p id="sync-dialog-title" className="text-[10px] mb-2 font-medium" style={{ color: "var(--cp-text-muted)" }}>
-        Sync "{skillName}" to:
+        {t("sync.titlePrefix")} "{skillName}" {t("sync.titleSuffix")}
       </p>
 
         {availableAgents.length === 0 ? (
           <p className="text-xs py-2 text-center" style={{ color: "var(--cp-text-muted)" }}>
-            All agents already have this skill
+            {t("sync.allHaveSkill")}
           </p>
         ) : (
           <div className="space-y-1.5 mb-3">
@@ -114,7 +116,7 @@ export const SyncDialog: FC<SyncDialogProps> = ({
                     className="rounded"
                     style={{ accentColor: "var(--cp-primary)" }}
                   />
-                  All Agents
+                  {t("sync.allAgents")}
                 </label>
               </>
             )}
@@ -143,9 +145,9 @@ export const SyncDialog: FC<SyncDialogProps> = ({
                 style={{ accentColor: "var(--cp-primary)" }}
               />
               <div>
-                <div className="font-medium">Also sync to Project</div>
+                <div className="font-medium">{t("sync.alsoProject")}</div>
                 <div className="text-[10px] mt-0.5" style={{ color: "var(--cp-text-muted)" }}>
-                  Copy to workspace-level agent directories
+                  {t("sync.alsoProjectDesc")}
                 </div>
               </div>
             </label>
@@ -155,7 +157,7 @@ export const SyncDialog: FC<SyncDialogProps> = ({
         {/* Already synced agents info */}
         {agentsWithSkill.size > 0 && (
           <div className="mb-3 text-[10px]" style={{ color: "var(--cp-text-muted)" }}>
-            Already synced: {Array.from(agentsWithSkill).join(", ")}
+            {t("sync.alreadySynced")} {Array.from(agentsWithSkill).join(", ")}
           </div>
         )}
 
@@ -170,8 +172,8 @@ export const SyncDialog: FC<SyncDialogProps> = ({
             onClick={handleSync}
             disabled={selectedAgents.size === 0}
           >
-            Sync ({selectedAgents.size})
-            {alsoSyncToProject && scope === "global" ? " + Project" : ""}
+            {t("main.sync")} ({selectedAgents.size})
+            {alsoSyncToProject && scope === "global" ? " + " + t("scope.project") : ""}
           </button>
           <button
             className="px-2 py-1 rounded text-xs transition-colors border"
@@ -181,7 +183,7 @@ export const SyncDialog: FC<SyncDialogProps> = ({
             }}
             onClick={onClose}
           >
-            Cancel
+            {t("sync.cancel")}
           </button>
         </div>
     </>

@@ -1,5 +1,6 @@
 import { type FC } from "react";
 import type { Scope } from "../../hooks/useSkills";
+import { useI18n } from "../../i18n";
 
 interface ScopeToggleProps {
   readonly scope: Scope;
@@ -7,6 +8,7 @@ interface ScopeToggleProps {
 }
 
 export const ScopeToggle: FC<ScopeToggleProps> = ({ scope, onScopeChange }) => {
+  const { t } = useI18n();
   return (
     <div
       className="flex p-0.5 rounded text-[11px]"
@@ -17,7 +19,7 @@ export const ScopeToggle: FC<ScopeToggleProps> = ({ scope, onScopeChange }) => {
         return (
           <button
             key={s}
-            className="px-2.5 py-1 rounded font-medium capitalize transition-all"
+            className="px-2.5 py-1 rounded font-medium transition-all"
             style={{
               background: isActive ? "var(--cp-surface)" : "transparent",
               color: isActive ? "var(--cp-text)" : "var(--cp-text-muted)",
@@ -25,7 +27,7 @@ export const ScopeToggle: FC<ScopeToggleProps> = ({ scope, onScopeChange }) => {
             }}
             onClick={() => onScopeChange(s)}
           >
-            {s}
+            {t(`scope.${s}`)}
           </button>
         );
       })}

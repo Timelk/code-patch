@@ -1,12 +1,14 @@
 import { type FC, useMemo } from "react";
 import { VibeTipsCard } from "./VibeTipsCard";
 import { MCP_MARKETS, FEATURED_MCPS } from "../../data/vibetips-data";
+import { useI18n } from "../../i18n";
 
 interface VibeTipsMCPsProps {
   readonly onOpenUrl: (url: string) => void;
 }
 
 export const VibeTipsMCPs: FC<VibeTipsMCPsProps> = ({ onOpenUrl }) => {
+  const { t } = useI18n();
   // Group featured MCPs by category
   const categorized = useMemo(() => {
     const groups = new Map<string, typeof FEATURED_MCPS[number][]>();
@@ -24,7 +26,7 @@ export const VibeTipsMCPs: FC<VibeTipsMCPsProps> = ({ onOpenUrl }) => {
       {/* MCP Marketplaces */}
       <section>
         <h3 className="text-xs font-bold uppercase tracking-wider mb-3 px-1" style={{ color: "var(--cp-text-muted)" }}>
-          MCP Marketplaces
+          {t("vt.mcpMarkets")}
         </h3>
         <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
           {MCP_MARKETS.map((market, i) => (

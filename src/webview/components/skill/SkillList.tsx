@@ -1,6 +1,7 @@
 import { type FC, useCallback, useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import type { Skill } from "../../hooks/useSkills";
+import { useI18n } from "../../i18n";
 
 interface SkillListProps {
   readonly skills: readonly Skill[];
@@ -67,6 +68,7 @@ export const SkillList: FC<SkillListProps> = ({
   onSyncSkill,
   showBadge = false,
 }) => {
+  const { t } = useI18n();
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -95,7 +97,7 @@ export const SkillList: FC<SkillListProps> = ({
   if (skills.length === 0) {
     return (
       <div className="p-3 text-xs text-center" style={{ color: "var(--cp-text-muted)" }}>
-        No skills found
+        {t("sidebar.noSkills")}
       </div>
     );
   }
@@ -123,7 +125,7 @@ export const SkillList: FC<SkillListProps> = ({
             className="text-[10px] font-medium"
             style={{ color: "var(--cp-text-muted)" }}
           >
-            {allSelected ? "Deselect all" : "Select all"} ({skills.length})
+            {allSelected ? t("sidebar.deselectAll") : t("sidebar.selectAll")} ({skills.length})
           </span>
         </div>
       )}
@@ -244,7 +246,7 @@ export const SkillList: FC<SkillListProps> = ({
               <path d="M23 4v6h-6M1 20v-6h6" />
               <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
             </svg>
-            Sync
+            {t("ctx.sync")}
           </button>
           <button
             className="w-full text-left px-3 py-1.5 text-xs transition-colors flex items-center gap-2"
@@ -264,7 +266,7 @@ export const SkillList: FC<SkillListProps> = ({
               <polyline points="3 6 5 6 21 6" />
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
             </svg>
-            Delete
+            {t("ctx.delete")}
           </button>
         </div>,
         document.body

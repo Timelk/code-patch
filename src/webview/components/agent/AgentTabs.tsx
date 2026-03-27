@@ -1,4 +1,5 @@
 import { type FC, useMemo, useRef, useState, useEffect, useCallback } from "react";
+import { useI18n } from "../../i18n";
 
 interface AgentInfo {
   readonly name: string;
@@ -20,12 +21,14 @@ export const AgentTabs: FC<AgentTabsProps> = ({
   activeFilter,
   onFilterChange,
 }) => {
+  const { t } = useI18n();
+
   const tabs = useMemo(() => {
     const installed = agents
       .filter((a) => a.installed)
       .map((a) => ({ label: a.displayName, value: a.name }));
-    return [...installed, { label: "All", value: undefined as string | undefined }];
-  }, [agents]);
+    return [...installed, { label: t("agent.all"), value: undefined as string | undefined }];
+  }, [agents, t]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());

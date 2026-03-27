@@ -1,4 +1,5 @@
 import { type FC, useState, useEffect } from "react";
+import { useI18n } from "../../i18n";
 
 interface CreateSkillDialogProps {
   readonly onCreateSkill: (name: string, description: string, content: string) => void;
@@ -12,6 +13,8 @@ export const CreateSkillDialog: FC<CreateSkillDialogProps> = ({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [content, setContent] = useState("");
+
+  const { t } = useI18n();
 
   const isValid = name.trim().length > 0;
 
@@ -55,7 +58,7 @@ export const CreateSkillDialog: FC<CreateSkillDialogProps> = ({
           style={{ borderColor: "var(--cp-border)" }}
         >
           <h3 id="create-skill-title" className="text-sm font-semibold" style={{ color: "var(--cp-text)" }}>
-            New Skill
+            {t("create.title")}
           </h3>
           <button
             className="w-5 h-5 flex items-center justify-center rounded transition-colors"
@@ -78,7 +81,7 @@ export const CreateSkillDialog: FC<CreateSkillDialogProps> = ({
               className="block text-[10px] font-semibold uppercase tracking-wider mb-1"
               style={{ color: "var(--cp-text-muted)" }}
             >
-              Name *
+              {t("create.name")} *
             </label>
             <input
               type="text"
@@ -88,7 +91,7 @@ export const CreateSkillDialog: FC<CreateSkillDialogProps> = ({
                 borderColor: "var(--cp-input-border)",
                 color: "var(--cp-text)",
               }}
-              placeholder="my-skill-name"
+              placeholder={t("create.namePlaceholder")}
               value={name}
               onChange={(e) => setName(e.target.value)}
               autoFocus
@@ -101,7 +104,7 @@ export const CreateSkillDialog: FC<CreateSkillDialogProps> = ({
               className="block text-[10px] font-semibold uppercase tracking-wider mb-1"
               style={{ color: "var(--cp-text-muted)" }}
             >
-              Description
+              {t("create.description")}
             </label>
             <input
               type="text"
@@ -111,7 +114,7 @@ export const CreateSkillDialog: FC<CreateSkillDialogProps> = ({
                 borderColor: "var(--cp-input-border)",
                 color: "var(--cp-text)",
               }}
-              placeholder="What this skill does..."
+              placeholder={t("create.descPlaceholder")}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
@@ -123,7 +126,7 @@ export const CreateSkillDialog: FC<CreateSkillDialogProps> = ({
               className="block text-[10px] font-semibold uppercase tracking-wider mb-1"
               style={{ color: "var(--cp-text-muted)" }}
             >
-              Content
+              {t("create.content")}
             </label>
             <textarea
               className="w-full px-2.5 py-1.5 rounded text-xs border outline-none resize-y min-h-[100px]"
@@ -133,7 +136,7 @@ export const CreateSkillDialog: FC<CreateSkillDialogProps> = ({
                 color: "var(--cp-text)",
                 fontFamily: "var(--vscode-editor-font-family, monospace)",
               }}
-              placeholder="# Skill Title&#10;&#10;Skill instructions here..."
+              placeholder={t("create.contentPlaceholder")}
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={6}
@@ -154,7 +157,7 @@ export const CreateSkillDialog: FC<CreateSkillDialogProps> = ({
             }}
             onClick={onClose}
           >
-            Cancel
+            {t("create.cancel")}
           </button>
           <button
             className="px-3 py-1.5 rounded text-xs font-medium transition-colors"
@@ -166,7 +169,7 @@ export const CreateSkillDialog: FC<CreateSkillDialogProps> = ({
             onClick={handleSubmit}
             disabled={!isValid}
           >
-            Create
+            {t("create.submit")}
           </button>
         </div>
       </div>

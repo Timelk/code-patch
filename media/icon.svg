@@ -1,5 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <polyline points="16 18 22 12 16 6"></polyline>
-  <polyline points="8 6 2 12 8 18"></polyline>
-  <line x1="12" y1="2" x2="12" y2="22" opacity="0.5"></line>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0e639c"/>
+      <stop offset="100%" stop-color="#1177bb"/>
+    </linearGradient>
+    <linearGradient id="patch" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#23d18b"/>
+      <stop offset="100%" stop-color="#17b67c"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded background -->
+  <rect x="4" y="4" width="120" height="120" rx="26" fill="url(#bg)"/>
+  <!-- Code brackets < > -->
+  <polyline points="50 42 30 64 50 86" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="78 42 98 64 78 86" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Patch diamond (center) -->
+  <g transform="translate(64,64)">
+    <rect x="-14" y="-14" width="28" height="28" rx="4" transform="rotate(45)" fill="url(#patch)"/>
+    <!-- Plus sign inside patch -->
+    <line x1="0" y1="-6" x2="0" y2="6" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round"/>
+    <line x1="-6" y1="0" x2="6" y2="0" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round"/>
+  </g>
 </svg>
