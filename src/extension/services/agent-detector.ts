@@ -94,6 +94,26 @@ export async function detectAgents(): Promise<readonly AgentInfo[]> {
 }
 
 /**
+ * Returns ALL agents from registry with their enabled state (no filtering).
+ * Used by Settings panel to display toggles for all agents.
+ */
+export async function detectAllAgents(): Promise<readonly (AgentInfo & { enabled: boolean })[]> {
+  const settings = getAgentSettings();
+
+  const results = await Promise.all(
+    AGENT_REGISTRY.map(async (baseAgent) => {
+      const override = settings[baseAgent.name];
+      const agent = applyOverrides(baseAgent, override);
+      const installed = await isAgentInstalled(agent);
+      const enabled = override?.enabled !== false;
+      return { ...agent, installed, enabled };
+    })
+  );
+
+  return results;
+}
+
+/**
  * Returns only installed agents (respecting settings).
  */
 export async function getInstalledAgents(): Promise<readonly AgentInfo[]> {

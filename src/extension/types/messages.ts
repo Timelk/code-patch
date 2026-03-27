@@ -38,18 +38,6 @@ export interface SyncHistoryEntry {
   readonly timestamp: number;
 }
 
-// ─── Remote Skill Types ───────────────────────────────────────────
-
-export interface RemoteSkillItem {
-  readonly name: string;
-  readonly description: string;
-  readonly author: string;
-  readonly downloads: number;
-  readonly tags: readonly string[];
-  readonly version?: string;
-  readonly homepage?: string;
-}
-
 // ─── Extension → Webview ───────────────────────────────────────────
 
 export type ExtensionMessage =
@@ -68,9 +56,7 @@ export type ExtensionMessage =
   | { readonly type: "history:loaded"; readonly payload: readonly SyncHistoryEntry[] }
   | { readonly type: "skill:agentsWithSkill"; readonly payload: readonly string[] }
   | { readonly type: "error:occurred"; readonly payload: { readonly operation: string; readonly message: string } }
-  | { readonly type: "remote:searchResult"; readonly payload: { readonly sourceId: string; readonly skills: readonly RemoteSkillItem[]; readonly total: number; readonly error?: string } }
-  | { readonly type: "remote:installResult"; readonly payload: { readonly success: boolean; readonly skillName: string; readonly error?: string } }
-  | { readonly type: "remote:removeResult"; readonly payload: { readonly success: boolean; readonly skillName: string; readonly error?: string } };
+  | { readonly type: "agents:allLoaded"; readonly payload: readonly (AgentInfo & { readonly enabled: boolean })[] };
 
 // ─── Webview → Extension ───────────────────────────────────────────
 
@@ -88,6 +74,7 @@ export type WebviewMessage =
       readonly payload: {
         readonly skillName: string;
         readonly targetAgents: readonly string[];
+        readonly alsoSyncToProject?: boolean;
       };
     }
   | {
@@ -95,6 +82,7 @@ export type WebviewMessage =
       readonly payload: {
         readonly skillNames: readonly string[];
         readonly targetAgents: readonly string[];
+        readonly alsoSyncToProject?: boolean;
       };
     }
   | {
@@ -124,9 +112,9 @@ export type WebviewMessage =
   | { readonly type: "history:clear" }
   | { readonly type: "skill:checkAgents"; readonly payload: { readonly skillName: string } }
   | { readonly type: "settings:open" }
-  | { readonly type: "remote:search"; readonly payload: { readonly sourceId: string; readonly query?: string } }
-  | { readonly type: "remote:install"; readonly payload: { readonly sourceId: string; readonly skill: RemoteSkillItem; readonly targetAgent?: string } }
-  | { readonly type: "remote:remove"; readonly payload: { readonly skillName: string } };
+  | { readonly type: "agents:loadAll" }
+  | { readonly type: "agent:toggle"; readonly payload: { readonly agentName: string; readonly enabled: boolean } }
+  | { readonly type: "url:open"; readonly payload: { readonly url: string } };
 
 export type Scope = "global" | "project";
 

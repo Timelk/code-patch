@@ -1,16 +1,16 @@
 import { type FC, useState } from "react";
 import { SkillDetail } from "../skill/SkillDetail";
 import { SyncDialog } from "../skill/SyncDialog";
-import type { Skill } from "../../hooks/useSkills";
+import type { Skill, Scope } from "../../hooks/useSkills";
 import type { AgentInfo } from "../../hooks/useAgents";
 
 interface MainContentProps {
   readonly selectedSkill: Skill | null;
   readonly agents: readonly AgentInfo[];
-  readonly onSync: (skillName: string, targetAgents: string[]) => void;
-  readonly onBatchSync: (skillNames: string[], targetAgents: string[]) => void;
+  readonly scope: Scope;
+  readonly onSync: (skillName: string, targetAgents: string[], alsoSyncToProject?: boolean) => void;
+  readonly onBatchSync: (skillNames: string[], targetAgents: string[], alsoSyncToProject?: boolean) => void;
   readonly onBatchDelete: () => void;
-  readonly onDiffRequest: (skillName: string) => void;
   readonly onShowHistory: () => void;
   readonly multiSelect: boolean;
   readonly selectedSkillNames: ReadonlySet<string>;
@@ -21,10 +21,10 @@ interface MainContentProps {
 export const MainContent: FC<MainContentProps> = ({
   selectedSkill,
   agents,
+  scope,
   onSync,
   onBatchSync,
   onBatchDelete,
-  onDiffRequest,
   onShowHistory,
   multiSelect,
   selectedSkillNames,
@@ -57,13 +57,13 @@ export const MainContent: FC<MainContentProps> = ({
                 opacity: (selectedSkill || hasBatchSelection) ? 1 : 0.6,
               }}
               onClick={() => {
-              if (selectedSkill || hasBatchSelection) {
-                if (selectedSkill && !hasBatchSelection) {
-                  onCheckAgentsForSync(selectedSkill.name);
+                if (selectedSkill || hasBatchSelection) {
+                  if (selectedSkill && !hasBatchSelection) {
+                    onCheckAgentsForSync(selectedSkill.name);
+                  }
+                  setShowSyncDialog(true);
                 }
-                setShowSyncDialog(true);
-              }
-            }}
+              }}
               disabled={!selectedSkill && !hasBatchSelection}
             >
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -78,11 +78,12 @@ export const MainContent: FC<MainContentProps> = ({
                 skillName={hasBatchSelection ? `${selectedSkillNames.size} skills` : selectedSkill!.name}
                 agents={agents}
                 agentsWithSkill={hasBatchSelection ? new Set<string>() : agentsWithSkill}
-                onSync={(targetAgents) => {
+                scope={scope}
+                onSync={(targetAgents, alsoSyncToProject) => {
                   if (hasBatchSelection) {
-                    onBatchSync(Array.from(selectedSkillNames), targetAgents);
+                    onBatchSync(Array.from(selectedSkillNames), targetAgents, alsoSyncToProject);
                   } else if (selectedSkill) {
-                    onSync(selectedSkill.name, targetAgents);
+                    onSync(selectedSkill.name, targetAgents, alsoSyncToProject);
                   }
                   setShowSyncDialog(false);
                 }}
@@ -90,27 +91,6 @@ export const MainContent: FC<MainContentProps> = ({
               />
             )}
           </div>
-
-          {/* Diff button */}
-          <button
-            className="flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors border"
-            style={{
-              borderColor: "var(--cp-border)",
-              color: selectedSkill ? "var(--cp-text-muted)" : "var(--cp-text-muted)",
-              opacity: selectedSkill ? 1 : 0.4,
-              cursor: selectedSkill ? "pointer" : "default",
-            }}
-            onClick={() => selectedSkill && onDiffRequest(selectedSkill.name)}
-            disabled={!selectedSkill}
-            title="Compare across agents"
-          >
-            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="20" x2="18" y2="10" />
-              <line x1="12" y1="20" x2="12" y2="4" />
-              <line x1="6" y1="20" x2="6" y2="14" />
-            </svg>
-            Diff
-          </button>
 
           {/* History button */}
           <button
@@ -156,7 +136,6 @@ export const MainContent: FC<MainContentProps> = ({
             </button>
           )}
         </div>
-
       </div>
 
       {/* Main content area */}
@@ -166,14 +145,23 @@ export const MainContent: FC<MainContentProps> = ({
         ) : (
           <div className="flex items-center justify-center h-full">
             <div className="text-center" style={{ color: "var(--cp-text-muted)" }}>
-              <svg className="w-12 h-12 mx-auto mb-3 opacity-30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <polyline points="16 18 22 12 16 6" />
-                <polyline points="8 6 2 12 8 18" />
-              </svg>
-              <p className="text-sm">Select a skill to view details</p>
-              {multiSelect && (
-                <p className="text-xs mt-1">
-                Use checkboxes to select skills for batch sync or delete
+              <div
+                className="w-16 h-16 mx-auto mb-4 rounded-xl flex items-center justify-center"
+                style={{ background: "rgba(14, 99, 156, 0.08)" }}
+              >
+                <svg className="w-8 h-8" style={{ color: "var(--cp-primary)", opacity: 0.4 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <polyline points="16 18 22 12 16 6" />
+                  <polyline points="8 6 2 12 8 18" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium mb-1">Select a skill to view details</p>
+              {multiSelect ? (
+                <p className="text-xs" style={{ opacity: 0.7 }}>
+                  Use checkboxes to select skills for batch sync or delete
+                </p>
+              ) : (
+                <p className="text-xs" style={{ opacity: 0.7 }}>
+                  Click on a skill in the sidebar to get started
                 </p>
               )}
             </div>

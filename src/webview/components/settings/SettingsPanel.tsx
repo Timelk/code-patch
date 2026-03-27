@@ -2,17 +2,22 @@ import { type FC, useEffect } from "react";
 import type { AgentInfo } from "../../hooks/useAgents";
 import { postMessage } from "../../services/vscode-message";
 
+interface AllAgentInfo extends AgentInfo {
+  readonly enabled: boolean;
+}
+
 interface SettingsPanelProps {
-  readonly agents: readonly AgentInfo[];
+  readonly allAgents: readonly AllAgentInfo[];
+  readonly onAgentToggle: (agentName: string, enabled: boolean) => void;
   readonly onClose: () => void;
 }
 
 /**
- * Visual settings panel overlay — replaces direct JSON config opening.
- * Shows agent status, key paths, and provides quick access to VSCode settings.
+ * Settings panel overlay with agent toggle switches and extension info.
  */
-export const SettingsPanel: FC<SettingsPanelProps> = ({ agents, onClose }) => {
-  const installedAgents = agents.filter((a) => a.installed);
+export const SettingsPanel: FC<SettingsPanelProps> = ({ allAgents, onAgentToggle, onClose }) => {
+  const installedCount = allAgents.filter((a) => a.installed).length;
+  const enabledCount = allAgents.filter((a) => a.enabled).length;
 
   const handleOpenJsonSettings = () => {
     postMessage({ type: "settings:open" });
@@ -29,7 +34,7 @@ export const SettingsPanel: FC<SettingsPanelProps> = ({ agents, onClose }) => {
   return (
     <div
       className="fixed inset-0 z-40 flex items-center justify-center"
-      style={{ background: "rgba(0,0,0,0.5)" }}
+      style={{ background: "rgba(0,0,0,0.45)" }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -38,7 +43,7 @@ export const SettingsPanel: FC<SettingsPanelProps> = ({ agents, onClose }) => {
         role="dialog"
         aria-modal="true"
         aria-labelledby="settings-title"
-        className="rounded-lg shadow-xl border w-[480px] max-h-[80vh] flex flex-col"
+        className="cp-dialog-enter rounded-lg shadow-xl border w-[520px] max-h-[80vh] flex flex-col"
         style={{
           background: "var(--cp-surface)",
           borderColor: "var(--cp-border)",
@@ -46,14 +51,22 @@ export const SettingsPanel: FC<SettingsPanelProps> = ({ agents, onClose }) => {
       >
         {/* Header */}
         <div
-          className="flex items-center justify-between px-4 py-3 border-b shrink-0"
+          className="flex items-center justify-between px-5 py-3.5 border-b shrink-0"
           style={{ borderColor: "var(--cp-border)" }}
         >
-          <h2 id="settings-title" className="text-sm font-bold" style={{ color: "var(--cp-text)" }}>
-            Settings
-          </h2>
+          <div className="flex items-center gap-2.5">
+            <div className="p-1 rounded" style={{ background: "rgba(14, 99, 156, 0.12)" }}>
+              <svg className="w-4 h-4" style={{ color: "var(--cp-primary)" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </div>
+            <h2 id="settings-title" className="text-sm font-bold" style={{ color: "var(--cp-text)" }}>
+              Settings
+            </h2>
+          </div>
           <button
-            className="p-1 rounded transition-colors"
+            className="p-1.5 rounded transition-colors duration-150"
             style={{ color: "var(--cp-text-muted)" }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = "var(--cp-list-hover)";
@@ -72,45 +85,51 @@ export const SettingsPanel: FC<SettingsPanelProps> = ({ agents, onClose }) => {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-5 space-y-5">
           {/* Agents Section */}
-          <SettingsSection title="Agents">
-            <div className="space-y-1.5">
-              {agents.map((agent) => (
+          <SettingsSection
+            title="Agents"
+            badge={`${enabledCount} enabled · ${installedCount} installed`}
+          >
+            <div className="space-y-1">
+              {allAgents.map((agent, i) => (
                 <div
                   key={agent.name}
-                  className="flex items-center justify-between px-3 py-2 rounded border"
+                  className="flex items-center justify-between px-3 py-2.5 rounded-md border transition-all duration-150"
                   style={{
-                    background: "var(--cp-bg)",
-                    borderColor: "var(--cp-border)",
+                    background: agent.enabled ? "var(--cp-bg)" : "transparent",
+                    borderColor: agent.enabled ? "var(--cp-border)" : "transparent",
+                    opacity: agent.enabled ? 1 : 0.55,
+                    animationDelay: `${i * 20}ms`,
                   }}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2.5">
                     <span
-                      className="w-2 h-2 rounded-full shrink-0"
+                      className="w-2 h-2 rounded-full shrink-0 transition-colors duration-200"
                       style={{
-                        background: agent.installed
-                          ? "var(--cp-success)"
-                          : "var(--cp-text-muted)",
+                        background: !agent.enabled
+                          ? "var(--cp-text-muted)"
+                          : agent.installed
+                            ? "var(--cp-success)"
+                            : "var(--cp-error)",
                       }}
                     />
-                    <span className="text-xs font-medium" style={{ color: "var(--cp-text)" }}>
-                      {agent.displayName}
-                    </span>
+                    <div>
+                      <div
+                        className="text-xs font-medium transition-colors duration-150"
+                        style={{ color: agent.enabled ? "var(--cp-text)" : "var(--cp-text-muted)" }}
+                      >
+                        {agent.displayName}
+                      </div>
+                      <div className="text-[10px] mt-0.5" style={{ color: "var(--cp-text-muted)" }}>
+                        {agent.installed ? "Installed" : "Not found"}
+                      </div>
+                    </div>
                   </div>
-                  <span
-                    className="text-[10px] px-1.5 py-0.5 rounded"
-                    style={{
-                      background: agent.installed
-                        ? "rgba(0,128,0,0.1)"
-                        : "var(--cp-badge-bg)",
-                      color: agent.installed
-                        ? "var(--cp-success)"
-                        : "var(--cp-text-muted)",
-                    }}
-                  >
-                    {agent.installed ? "Installed" : "Not found"}
-                  </span>
+                  <ToggleSwitch
+                    checked={agent.enabled}
+                    onChange={() => onAgentToggle(agent.name, !agent.enabled)}
+                  />
                 </div>
               ))}
             </div>
@@ -126,7 +145,7 @@ export const SettingsPanel: FC<SettingsPanelProps> = ({ agents, onClose }) => {
             <SettingsRow
               label="Active Agents"
               description="Number of agents detected on this machine"
-              value={`${installedAgents.length} / ${agents.length}`}
+              value={`${enabledCount} / ${allAgents.length}`}
             />
           </SettingsSection>
 
@@ -147,11 +166,11 @@ export const SettingsPanel: FC<SettingsPanelProps> = ({ agents, onClose }) => {
 
         {/* Footer */}
         <div
-          className="flex items-center justify-between px-4 py-3 border-t shrink-0"
+          className="flex items-center justify-between px-5 py-3 border-t shrink-0"
           style={{ borderColor: "var(--cp-border)" }}
         >
           <button
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs transition-colors border"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs transition-colors duration-150 border"
             style={{
               borderColor: "var(--cp-border)",
               color: "var(--cp-text-muted)",
@@ -171,10 +190,16 @@ export const SettingsPanel: FC<SettingsPanelProps> = ({ agents, onClose }) => {
             Open JSON Settings
           </button>
           <button
-            className="px-4 py-1.5 rounded text-xs font-medium transition-colors"
+            className="px-4 py-1.5 rounded text-xs font-medium transition-colors duration-150"
             style={{
               background: "var(--cp-primary)",
               color: "var(--cp-primary-fg)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "var(--cp-primary-hover)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "var(--cp-primary)";
             }}
             onClick={onClose}
           >
@@ -186,14 +211,58 @@ export const SettingsPanel: FC<SettingsPanelProps> = ({ agents, onClose }) => {
   );
 };
 
-const SettingsSection: FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
+/* ─── Toggle Switch ─────────────────────────────────────────────── */
+
+const ToggleSwitch: FC<{ checked: boolean; onChange: () => void }> = ({ checked, onChange }) => (
+  <button
+    role="switch"
+    aria-checked={checked}
+    className="relative shrink-0 rounded-full transition-colors duration-200"
+    style={{
+      width: 34,
+      height: 18,
+      background: checked ? "var(--cp-primary)" : "var(--cp-badge-bg)",
+    }}
+    onClick={onChange}
+  >
+    <span
+      className="absolute rounded-full transition-all duration-200 ease-out"
+      style={{
+        width: 14,
+        height: 14,
+        top: 2,
+        left: checked ? 18 : 2,
+        background: "#fff",
+        boxShadow: "0 1px 2px rgba(0,0,0,0.3)",
+      }}
+    />
+  </button>
+);
+
+/* ─── Sub-components ────────────────────────────────────────────── */
+
+const SettingsSection: FC<{
+  title: string;
+  badge?: string;
+  children: React.ReactNode;
+}> = ({ title, badge, children }) => (
   <div>
-    <h3
-      className="text-[10px] font-bold uppercase tracking-wider mb-2 px-1"
-      style={{ color: "var(--cp-text-muted)" }}
-    >
-      {title}
-    </h3>
+    <div className="flex items-center gap-2 mb-2 px-1">
+      <h3
+        className="text-[10px] font-bold uppercase tracking-wider"
+        style={{ color: "var(--cp-text-muted)" }}
+      >
+        {title}
+      </h3>
+      {badge && (
+        <span
+          className="text-[9px] px-1.5 py-0.5 rounded-full"
+          style={{ background: "var(--cp-badge-bg)", color: "var(--cp-badge-fg)" }}
+        >
+          {badge}
+        </span>
+      )}
+    </div>
     {children}
   </div>
 );
@@ -204,7 +273,7 @@ const SettingsRow: FC<{
   value: string;
 }> = ({ label, description, value }) => (
   <div
-    className="flex items-center justify-between px-3 py-2 rounded border"
+    className="flex items-center justify-between px-3 py-2.5 rounded-md border"
     style={{
       background: "var(--cp-bg)",
       borderColor: "var(--cp-border)",

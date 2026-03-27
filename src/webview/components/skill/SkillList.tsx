@@ -103,7 +103,7 @@ export const SkillList: FC<SkillListProps> = ({
   const allSelected =
     multiSelect &&
     skills.length > 0 &&
-    skills.every((s) => selectedSkillNames?.has(s.name));
+    skills.every((s) => selectedSkillNames?.has(s.filePath));
 
   return (
     <div className="space-y-0.5">
@@ -128,21 +128,21 @@ export const SkillList: FC<SkillListProps> = ({
         </div>
       )}
       {skills.map((skill) => {
-        const isSelected = selectedSkill?.name === skill.name;
-        const isChecked = selectedSkillNames?.has(skill.name) ?? false;
+        const isSelected = selectedSkill?.filePath === skill.filePath;
+        const isChecked = selectedSkillNames?.has(skill.filePath) ?? false;
         return (
-          <div key={skill.name} className="flex items-center gap-1">
+          <div key={skill.filePath} className="flex items-center gap-1">
             {multiSelect && (
               <input
                 type="checkbox"
                 checked={isChecked}
-                onChange={() => onToggleSkillSelection?.(skill.name)}
+                onChange={() => onToggleSkillSelection?.(skill.filePath)}
                 className="ml-1 shrink-0"
                 style={{ accentColor: "var(--cp-primary)" }}
               />
             )}
             <button
-              className="flex-1 text-left px-2 py-1.5 rounded text-xs font-medium transition-colors min-w-0"
+              className="flex-1 text-left px-2 py-1.5 rounded text-xs font-medium min-w-0"
               style={{
                 background: isSelected
                   ? "var(--cp-list-active)"
@@ -150,15 +150,21 @@ export const SkillList: FC<SkillListProps> = ({
                 color: isSelected
                   ? "var(--cp-list-active-fg)"
                   : "var(--cp-text)",
+                borderLeft: isSelected
+                  ? "2px solid var(--cp-primary)"
+                  : "2px solid transparent",
+                transition: "background 150ms ease, border-color 150ms ease",
               }}
               onMouseEnter={(e) => {
                 if (!isSelected) {
                   e.currentTarget.style.background = "var(--cp-list-hover)";
+                  e.currentTarget.style.borderLeftColor = "var(--cp-text-muted)";
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isSelected) {
                   e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.borderLeftColor = "transparent";
                 }
               }}
               onClick={() => onSelectSkill(skill)}

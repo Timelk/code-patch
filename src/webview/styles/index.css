@@ -128,3 +128,74 @@ body {
   margin-left: 0;
   color: var(--cp-text-muted);
 }
+
+/* Dialog entrance animation */
+@keyframes cp-dialog-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.cp-dialog-enter {
+  animation: cp-dialog-enter 180ms ease-out both;
+}
+
+/* Sidebar tab sliding underline */
+.cp-tab-indicator {
+  transition: left 200ms ease-out, width 200ms ease-out;
+}
+
+/* Skill list item stagger animation */
+@keyframes cp-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Toast slide-up animation */
+@keyframes cp-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cp-toast {
+  animation: cp-toast-in 200ms ease-out both;
+}
+
+/* VibeTips card entrance animation */
+@keyframes vibetips-fadein {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.vibetips-card {
+  animation: vibetips-fadein 300ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vibetips-card {
+    animation: none;
+  }
+}

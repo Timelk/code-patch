@@ -1,11 +1,13 @@
 import { type FC, useState, useEffect } from "react";
 import type { AgentInfo } from "../../hooks/useAgents";
+import type { Scope } from "../../hooks/useSkills";
 
 interface SyncDialogProps {
   readonly skillName: string;
   readonly agents: readonly AgentInfo[];
   readonly agentsWithSkill: ReadonlySet<string>;
-  readonly onSync: (targetAgents: string[]) => void;
+  readonly scope: Scope;
+  readonly onSync: (targetAgents: string[], alsoSyncToProject?: boolean) => void;
   readonly onClose: () => void;
   /** When true, render as inline panel (no backdrop / no absolute positioning) */
   readonly centered?: boolean;
@@ -15,6 +17,7 @@ export const SyncDialog: FC<SyncDialogProps> = ({
   skillName,
   agents,
   agentsWithSkill,
+  scope,
   onSync,
   onClose,
   centered = false,
@@ -24,6 +27,7 @@ export const SyncDialog: FC<SyncDialogProps> = ({
     (a) => a.installed && !agentsWithSkill.has(a.name)
   );
   const [selectedAgents, setSelectedAgents] = useState<Set<string>>(new Set());
+  const [alsoSyncToProject, setAlsoSyncToProject] = useState(false);
 
   // Derive allSelected from actual state instead of tracking independently
   const allSelected = availableAgents.length > 0 &&
@@ -51,7 +55,10 @@ export const SyncDialog: FC<SyncDialogProps> = ({
 
   const handleSync = () => {
     if (selectedAgents.size > 0) {
-      onSync(Array.from(selectedAgents));
+      onSync(
+        Array.from(selectedAgents),
+        scope === "global" ? alsoSyncToProject : undefined
+      );
     }
   };
 
@@ -114,6 +121,37 @@ export const SyncDialog: FC<SyncDialogProps> = ({
           </div>
         )}
 
+        {/* Also sync to project scope — only shown in global mode */}
+        {scope === "global" && availableAgents.length > 0 && (
+          <div
+            className="mb-3 px-2.5 py-2 rounded-md border"
+            style={{
+              borderColor: alsoSyncToProject ? "var(--cp-primary)" : "var(--cp-border)",
+              background: alsoSyncToProject ? "rgba(14, 99, 156, 0.08)" : "var(--cp-bg)",
+              transition: "border-color 150ms ease, background 150ms ease",
+            }}
+          >
+            <label
+              className="flex items-center gap-2 text-xs cursor-pointer"
+              style={{ color: "var(--cp-text)" }}
+            >
+              <input
+                type="checkbox"
+                checked={alsoSyncToProject}
+                onChange={() => setAlsoSyncToProject((v) => !v)}
+                className="rounded"
+                style={{ accentColor: "var(--cp-primary)" }}
+              />
+              <div>
+                <div className="font-medium">Also sync to Project</div>
+                <div className="text-[10px] mt-0.5" style={{ color: "var(--cp-text-muted)" }}>
+                  Copy to workspace-level agent directories
+                </div>
+              </div>
+            </label>
+          </div>
+        )}
+
         {/* Already synced agents info */}
         {agentsWithSkill.size > 0 && (
           <div className="mb-3 text-[10px]" style={{ color: "var(--cp-text-muted)" }}>
@@ -133,6 +171,7 @@ export const SyncDialog: FC<SyncDialogProps> = ({
             disabled={selectedAgents.size === 0}
           >
             Sync ({selectedAgents.size})
+            {alsoSyncToProject && scope === "global" ? " + Project" : ""}
           </button>
           <button
             className="px-2 py-1 rounded text-xs transition-colors border"
@@ -155,7 +194,7 @@ export const SyncDialog: FC<SyncDialogProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="sync-dialog-title"
-        className="w-72 rounded-lg shadow-xl p-3 border"
+        className="cp-dialog-enter w-72 rounded-lg shadow-xl p-3 border"
         style={{
           background: "var(--cp-surface)",
           borderColor: "var(--cp-border)",
@@ -180,7 +219,7 @@ export const SyncDialog: FC<SyncDialogProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="sync-dialog-title"
-        className="absolute top-full left-0 mt-1 w-60 rounded-lg shadow-xl z-50 p-3 border"
+        className="cp-dialog-enter absolute top-full left-0 mt-1 w-64 rounded-lg shadow-xl z-50 p-3 border"
         style={{
           background: "var(--cp-surface)",
           borderColor: "var(--cp-border)",

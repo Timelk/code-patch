@@ -37,10 +37,10 @@ export function useSkills() {
     (payload: readonly Skill[]) => {
       setSkills(payload);
       setLoading(false);
-      // Keep selected skill if still in list (functional update avoids stale closure)
+      // Keep selected skill if still in list — match by filePath for uniqueness
       setSelectedSkill((prev) => {
         if (!prev) return null;
-        return payload.find((s) => s.name === prev.name) ?? null;
+        return payload.find((s) => s.filePath === prev.filePath) ?? null;
       });
     },
     []

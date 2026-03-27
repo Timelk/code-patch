@@ -108,9 +108,8 @@ export async function scanSkills(
   const scannedDirs = new Set<string>();
   const allSkills: Skill[] = [];
 
-  // When "All" (no agent filter), scan both scopes to show everything
-  const scopes: Array<"global" | "project"> =
-    !agentFilter ? ["global", "project"] : [scope];
+  // Always respect the scope parameter — "All" mode shows all agents within the selected scope
+  const scopes: Array<"global" | "project"> = [scope];
 
   for (const s of scopes) {
     for (const agent of agents) {
@@ -125,17 +124,25 @@ export async function scanSkills(
     }
   }
 
-  // Deduplicate by skill name (keep first occurrence)
-  const seen = new Set<string>();
-  const unique: Skill[] = [];
-  for (const skill of allSkills) {
-    if (!seen.has(skill.name)) {
-      seen.add(skill.name);
-      unique.push(skill);
+  // When a specific agent is selected, deduplicate by name (shared dirs may produce dupes).
+  // In "All" mode (no agentFilter), keep every occurrence so users can see
+  // which agents have which skills — the badge makes each entry distinguishable.
+  if (agentFilter) {
+    const seen = new Set<string>();
+    const unique: Skill[] = [];
+    for (const skill of allSkills) {
+      if (!seen.has(skill.name)) {
+        seen.add(skill.name);
+        unique.push(skill);
+      }
     }
+    return unique.sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  return unique.sort((a, b) => a.name.localeCompare(b.name));
+  // All mode: sort by name first, then by sourceAgent for grouping
+  return allSkills.sort((a, b) =>
+    a.name.localeCompare(b.name) || a.sourceAgent.localeCompare(b.sourceAgent)
+  );
 }
 
 /**

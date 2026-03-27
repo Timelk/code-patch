@@ -1,4 +1,4 @@
-import { type FC, useEffect, useCallback, useState, useRef, useMemo } from "react";
+import { type FC, useEffect, useCallback, useState, useRef } from "react";
 import { Header } from "./components/layout/Header";
 import { Sidebar } from "./components/layout/Sidebar";
 import { MainContent } from "./components/layout/MainContent";
@@ -10,13 +10,13 @@ import { DiffPreview, type DiffEntry } from "./components/skill/DiffPreview";
 import { SyncHistory, type SyncHistoryEntry } from "./components/skill/SyncHistory";
 import { SyncDialog } from "./components/skill/SyncDialog";
 import { SettingsPanel } from "./components/settings/SettingsPanel";
+import { VibeTipsPanel } from "./components/vibetips/VibeTipsPanel";
 import { useSkills } from "./hooks/useSkills";
 import { useAgents, type AgentInfo } from "./hooks/useAgents";
 import { useVSCodeApi } from "./hooks/useVSCodeApi";
 import { postMessage } from "./services/vscode-message";
 import type { Skill, Scope } from "./hooks/useSkills";
 import type { McpServer } from "./components/mcp/McpList";
-import type { RemoteSkill as RemoteSkillItem } from "./services/remote-skill-api";
 
 interface SyncReport {
   readonly results: readonly {
@@ -44,9 +44,7 @@ type ExtensionMessage =
   | { type: "history:loaded"; payload: SyncHistoryEntry[] }
   | { type: "skill:agentsWithSkill"; payload: string[] }
   | { type: "error:occurred"; payload: { operation: string; message: string } }
-  | { type: "remote:searchResult"; payload: { sourceId: string; skills: RemoteSkillItem[]; total: number; error?: string } }
-  | { type: "remote:installResult"; payload: { success: boolean; skillName: string; error?: string } }
-  | { type: "remote:removeResult"; payload: { success: boolean; skillName: string; error?: string } };
+  | { type: "agents:allLoaded"; payload: (AgentInfo & { enabled: boolean })[] };
 
 export const App: FC = () => {
   const {
@@ -59,6 +57,7 @@ export const App: FC = () => {
     agentFilter,
     changeAgentFilter,
     loading,
+    loadSkills,
     handleSkillsLoaded,
     searchQuery,
     setSearchQuery,
@@ -105,14 +104,13 @@ export const App: FC = () => {
   // Settings panel
   const [showSettings, setShowSettings] = useState(false);
 
-  // Remote skills state
-  const [remoteSkills, setRemoteSkills] = useState<readonly RemoteSkillItem[]>([]);
-  const [remoteTotal, setRemoteTotal] = useState(0);
-  const [remoteLoading, setRemoteLoading] = useState(false);
-  const [remoteError, setRemoteError] = useState<string | null>(null);
+  // All agents with enabled state (for Settings panel toggles)
+  const [allAgentsWithEnabled, setAllAgentsWithEnabled] = useState<
+    readonly (AgentInfo & { enabled: boolean })[]
+  >([]);
 
-  // Remote install/remove pending state
-  const [pendingRemoteSkills, setPendingRemoteSkills] = useState<Set<string>>(new Set());
+  // Data source: local vs vibetips — elevated to App level, controlled by Header toggle
+  const [source, setSource] = useState<"local" | "vibetips">("local");
 
   // Pending sync from context menu — triggers sync dialog for a single skill
   const [pendingSyncSkill, setPendingSyncSkill] = useState<Skill | null>(null);
@@ -200,44 +198,9 @@ export const App: FC = () => {
           notificationTimerRef.current = setTimeout(() => setSyncNotification(null), 5000);
           break;
         }
-        case "remote:searchResult": {
-          const { skills: rSkills, total, error } = message.payload;
-          setRemoteSkills(rSkills);
-          setRemoteTotal(total);
-          setRemoteError(error ?? null);
-          setRemoteLoading(false);
+        case "agents:allLoaded":
+          setAllAgentsWithEnabled(message.payload);
           break;
-        }
-        case "remote:installResult": {
-          const { success, skillName, error: installError } = message.payload;
-          setPendingRemoteSkills((prev) => {
-            const next = new Set(prev);
-            next.delete(skillName);
-            return next;
-          });
-          const installMsg = success
-            ? `Installed "${skillName}" successfully`
-            : `Failed to install "${skillName}": ${installError}`;
-          setSyncNotification(installMsg);
-          clearTimeout(notificationTimerRef.current);
-          notificationTimerRef.current = setTimeout(() => setSyncNotification(null), 3000);
-          break;
-        }
-        case "remote:removeResult": {
-          const { success: removeSuccess, skillName: removedName, error: removeError } = message.payload;
-          setPendingRemoteSkills((prev) => {
-            const next = new Set(prev);
-            next.delete(removedName);
-            return next;
-          });
-          const removeMsg = removeSuccess
-            ? `Removed "${removedName}" successfully`
-            : `Failed to remove "${removedName}": ${removeError}`;
-          setSyncNotification(removeMsg);
-          clearTimeout(notificationTimerRef.current);
-          notificationTimerRef.current = setTimeout(() => setSyncNotification(null), 3000);
-          break;
-        }
       }
     },
     [handleSkillsLoaded, handleAgentsDetected, scope, agentFilter, multiSelect]
@@ -271,21 +234,29 @@ export const App: FC = () => {
     [changeAgentFilter]
   );
 
+  const handleSourceChange = useCallback(
+    (newSource: "local" | "vibetips") => {
+      setSource(newSource);
+      setSelectedSkill(null);
+    },
+    [setSelectedSkill]
+  );
+
   const handleSync = useCallback(
-    (skillName: string, targetAgents: string[]) => {
+    (skillName: string, targetAgents: string[], alsoSyncToProject?: boolean) => {
       postMessage({
         type: "sync:execute",
-        payload: { skillName, targetAgents },
+        payload: { skillName, targetAgents, alsoSyncToProject },
       });
     },
     []
   );
 
   const handleBatchSync = useCallback(
-    (skillNames: string[], targetAgents: string[]) => {
+    (skillNames: string[], targetAgents: string[], alsoSyncToProject?: boolean) => {
       postMessage({
         type: "sync:batch",
-        payload: { skillNames, targetAgents },
+        payload: { skillNames, targetAgents, alsoSyncToProject },
       });
     },
     []
@@ -303,9 +274,9 @@ export const App: FC = () => {
   );
 
   const handleBatchDelete = useCallback(() => {
-    // Collect full skill objects for all selected skills to capture filePaths
+    // selectedSkillNames now stores filePaths for unique identification
     const targets = skills
-      .filter((s) => selectedSkillNames.has(s.name))
+      .filter((s) => selectedSkillNames.has(s.filePath))
       .map((s) => ({ name: s.name, filePath: s.filePath }));
     if (targets.length > 0) {
       setDeleteTargets(targets);
@@ -363,10 +334,10 @@ export const App: FC = () => {
   }, []);
 
   const handleSelectAll = useCallback(() => {
-    const allNames = skills.map((s) => s.name);
+    const allPaths = skills.map((s) => s.filePath);
     setSelectedSkillNames((prev) => {
-      const allSelected = allNames.length > 0 && allNames.every((n) => prev.has(n));
-      return allSelected ? new Set<string>() : new Set(allNames);
+      const allSelected = allPaths.length > 0 && allPaths.every((p) => prev.has(p));
+      return allSelected ? new Set<string>() : new Set(allPaths);
     });
   }, [skills]);
 
@@ -393,33 +364,22 @@ export const App: FC = () => {
     postMessage({ type: "history:clear" });
   }, []);
 
-  const handleRemoteSearch = useCallback(
-    (sourceId: string, query?: string) => {
-      setRemoteLoading(true);
-      setRemoteError(null);
-      postMessage({ type: "remote:search", payload: { sourceId, query } });
-    },
-    []
-  );
+  // Open external URL via extension host (CSP-safe)
+  const handleOpenUrl = useCallback((url: string) => {
+    postMessage({ type: "url:open", payload: { url } });
+  }, []);
 
-  const handleRemoteInstall = useCallback(
-    (sourceId: string, skill: RemoteSkillItem) => {
-      setPendingRemoteSkills((prev) => new Set(prev).add(skill.name));
-      postMessage({ type: "remote:install", payload: { sourceId, skill, targetAgent: agentFilter } });
-    },
-    [agentFilter]
-  );
-
-  const handleRemoteRemove = useCallback(
-    (skillName: string) => {
-      setPendingRemoteSkills((prev) => new Set(prev).add(skillName));
-      postMessage({ type: "remote:remove", payload: { skillName } });
-    },
-    []
-  );
+  const handleRefresh = useCallback(() => {
+    loadSkills(scope, agentFilter);
+  }, [loadSkills, scope, agentFilter]);
 
   const handleOpenSettings = useCallback(() => {
+    postMessage({ type: "agents:loadAll" });
     setShowSettings(true);
+  }, []);
+
+  const handleAgentToggle = useCallback((agentName: string, enabled: boolean) => {
+    postMessage({ type: "agent:toggle", payload: { agentName, enabled } });
   }, []);
 
   const handleSidebarResize = useCallback((deltaX: number) => {
@@ -430,12 +390,6 @@ export const App: FC = () => {
     setRightPanelWidth((prev) => Math.max(160, Math.min(400, prev - deltaX)));
   }, []);
 
-  // Derive installed skill names for remote panel installed-state detection
-  const installedSkillNamesSet = useMemo(
-    () => new Set(allSkills.map((s) => s.name)),
-    [allSkills]
-  );
-
   // ─── Render ────────────────────────────────────────────────────────
 
   return (
@@ -445,65 +399,73 @@ export const App: FC = () => {
         onScopeChange={handleScopeChange}
         agentFilter={agentFilter}
         onAgentFilterChange={handleAgentFilterChange}
+        onRefresh={handleRefresh}
         onOpenSettings={handleOpenSettings}
         agents={agents}
+        source={source}
+        onSourceChange={handleSourceChange}
       />
 
-      <div className="flex-1 flex overflow-hidden">
-        <div style={{ width: sidebarWidth, flexShrink: 0 }} data-allow-context-menu>
-          <Sidebar
-            skills={skills}
+      {source === "local" ? (
+        /* ─── Local mode: 3-column layout ─── */
+        <div className="flex-1 flex overflow-hidden">
+          <div style={{ width: sidebarWidth, flexShrink: 0 }} data-allow-context-menu>
+            <Sidebar
+              skills={skills}
+              selectedSkill={selectedSkill}
+              onSelectSkill={setSelectedSkill}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              loading={loading}
+              onCreateSkill={() => setShowCreateDialog(true)}
+              mcpServers={mcpServers}
+              mcpLoading={mcpLoading}
+              onLoadMcps={handleLoadMcps}
+              multiSelect={multiSelect}
+              onToggleMultiSelect={handleToggleMultiSelect}
+              selectedSkillNames={selectedSkillNames}
+              onToggleSkillSelection={handleToggleSkillSelection}
+              onSelectAll={handleSelectAll}
+              onDeleteSkill={handleDeleteSkill}
+              onSyncSkill={handleSyncSkill}
+              showBadge={agentFilter === undefined}
+            />
+          </div>
+          <ResizeHandle onDrag={handleSidebarResize} />
+          <MainContent
             selectedSkill={selectedSkill}
-            onSelectSkill={setSelectedSkill}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            loading={loading}
-            onCreateSkill={() => setShowCreateDialog(true)}
-            mcpServers={mcpServers}
-            mcpLoading={mcpLoading}
-            onLoadMcps={handleLoadMcps}
-            multiSelect={multiSelect}
-            onToggleMultiSelect={handleToggleMultiSelect}
-            selectedSkillNames={selectedSkillNames}
-            onToggleSkillSelection={handleToggleSkillSelection}
-            onSelectAll={handleSelectAll}
-            onDeleteSkill={handleDeleteSkill}
-            onSyncSkill={handleSyncSkill}
-            showBadge={agentFilter === undefined}
-            remoteSkills={remoteSkills}
-            remoteTotal={remoteTotal}
-            remoteLoading={remoteLoading}
-            remoteError={remoteError}
-            onRemoteSearch={handleRemoteSearch}
-            installedSkillNames={installedSkillNamesSet}
-            onRemoteInstall={handleRemoteInstall}
-            onRemoteRemove={handleRemoteRemove}
-            pendingRemoteSkills={pendingRemoteSkills}
-          />
-        </div>
-        <ResizeHandle onDrag={handleSidebarResize} />
-        <MainContent
-          selectedSkill={selectedSkill}
-          agents={agents}
-          onSync={handleSync}
-          onBatchSync={handleBatchSync}
-          onBatchDelete={handleBatchDelete}
-          onDiffRequest={handleDiffRequest}
-          onShowHistory={handleShowHistory}
-          multiSelect={multiSelect}
-          selectedSkillNames={selectedSkillNames}
-          agentsWithSkill={agentsWithSkill}
-          onCheckAgentsForSync={handleCheckAgentsForSync}
-        />
-        <ResizeHandle onDrag={handleRightPanelResize} />
-        <div style={{ width: rightPanelWidth, flexShrink: 0 }}>
-          <RightPanel
             agents={agents}
-            skillCount={allSkills.length}
-            syncStats={syncStats}
+            scope={scope}
+            onSync={handleSync}
+            onBatchSync={(filePaths, targetAgents) => {
+              // Map filePaths back to skill names for extension protocol
+              const skillNames = skills
+                .filter((s) => filePaths.includes(s.filePath))
+                .map((s) => s.name);
+              handleBatchSync([...new Set(skillNames)], targetAgents);
+            }}
+            onBatchDelete={handleBatchDelete}
+            onShowHistory={handleShowHistory}
+            multiSelect={multiSelect}
+            selectedSkillNames={selectedSkillNames}
+            agentsWithSkill={agentsWithSkill}
+            onCheckAgentsForSync={handleCheckAgentsForSync}
           />
+          <ResizeHandle onDrag={handleRightPanelResize} />
+          <div style={{ width: rightPanelWidth, flexShrink: 0 }}>
+            <RightPanel
+              agents={agents}
+              skillCount={allSkills.length}
+              syncStats={syncStats}
+            />
+          </div>
         </div>
-      </div>
+      ) : (
+        /* ─── VibeTips mode: AI ecosystem hub ─── */
+        <div className="flex-1 overflow-hidden">
+          <VibeTipsPanel onOpenUrl={handleOpenUrl} />
+        </div>
+      )}
 
       {/* Create Skill Dialog (AC-13) */}
       {showCreateDialog && (
@@ -549,7 +511,8 @@ export const App: FC = () => {
       {/* Settings Panel */}
       {showSettings && (
         <SettingsPanel
-          agents={agents}
+          allAgents={allAgentsWithEnabled}
+          onAgentToggle={handleAgentToggle}
           onClose={() => setShowSettings(false)}
         />
       )}
@@ -567,9 +530,10 @@ export const App: FC = () => {
             skillName={pendingSyncSkill.name}
             agents={agents}
             agentsWithSkill={agentsWithSkill}
+            scope={scope}
             centered
-            onSync={(targetAgents) => {
-              handleSync(pendingSyncSkill.name, targetAgents);
+            onSync={(targetAgents, alsoSyncToProject) => {
+              handleSync(pendingSyncSkill.name, targetAgents, alsoSyncToProject);
               setPendingSyncSkill(null);
             }}
             onClose={() => setPendingSyncSkill(null)}
@@ -580,7 +544,7 @@ export const App: FC = () => {
       {/* Sync notification toast */}
       {syncNotification && (
         <div
-          className="fixed bottom-4 right-4 px-3 py-2 rounded-lg shadow-lg text-xs font-medium z-50 animate-pulse"
+          className="fixed bottom-4 right-4 px-3 py-2 rounded-lg shadow-lg text-xs font-medium z-50 cp-toast"
           style={{
             background: "var(--cp-primary)",
             color: "var(--cp-primary-fg)",
