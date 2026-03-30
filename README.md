@@ -1,4 +1,4 @@
-# Code Patch
+# Vibe Rules
 
 Unified skill manager for AI coding agents — sync skills across Claude Code, Codex, Cursor, Gemini CLI, Windsurf and 18 agents.
 
@@ -9,7 +9,7 @@ Unified skill manager for AI coding agents — sync skills across Claude Code, C
 - **Sync Engine** — Copy skills between agents with one click (snapshot-based, safe on all platforms)
 - **Batch Sync** — Multi-select skills and sync them to multiple agents at once
 - **Diff Preview** — Compare skill content across agents (identical / modified / missing / symlink)
-- **Sync History** — Persistent record of all sync operations (~/.code-patch/sync-history.json, max 100 entries)
+- **Sync History** — Persistent record of all sync operations (~/.vibe-rules/sync-history.json, max 100 entries)
 - **Remote Skill Marketplace** — Browse and install skills from SkillHub, SkillsMP, and Skills.sh
 - **MCP Discovery** — Scans MCP server configurations from Claude Code, Cursor, Windsurf, VSCode
 - **Agent Tab Filtering** — View skills per agent or "All" agents
@@ -47,8 +47,8 @@ Unified skill manager for AI coding agents — sync skills across Claude Code, C
 
 ```bash
 # Clone and install
-git clone <repo-url> code-patch
-cd code-patch
+git clone <repo-url> viberules
+cd viberules
 npm install
 
 # Build
@@ -63,7 +63,7 @@ Then install the `.vsix` file in VSCode via `Extensions: Install from VSIX...`.
 ## Usage
 
 1. Open any workspace in VSCode
-2. Run `Code Patch: Open Dashboard` from the Command Palette (`Ctrl+Shift+P`) or click the icon in the editor title bar
+2. Run `Vibe Rules: Open Dashboard` from the Command Palette (`Ctrl+Shift+P`) or click the icon in the editor title bar
 3. The dashboard opens as an editor tab
 4. Select an agent tab to filter skills, or use "All" to see everything
 5. Toggle **Global / Project** scope in the header
@@ -80,7 +80,7 @@ Configure per-agent behavior in VSCode Settings (`Ctrl+,`):
 
 ```jsonc
 {
-  "codePatch.agents": {
+  "vibeRules.agents": {
     "claude-code": {
       "enabled": true,
       "skillsDir": ".claude/skills",
@@ -98,9 +98,9 @@ Configure per-agent behavior in VSCode Settings (`Ctrl+,`):
 
 | Setting | Type | Description |
 |---------|------|-------------|
-| `codePatch.agents.<name>.enabled` | `boolean` | Enable/disable agent management (default: `true`) |
-| `codePatch.agents.<name>.skillsDir` | `string` | Override project-level skills directory |
-| `codePatch.agents.<name>.globalSkillsDir` | `string` | Override global skills directory (supports `${home}`, `${configHome}`) |
+| `vibeRules.agents.<name>.enabled` | `boolean` | Enable/disable agent management (default: `true`) |
+| `vibeRules.agents.<name>.skillsDir` | `string` | Override project-level skills directory |
+| `vibeRules.agents.<name>.globalSkillsDir` | `string` | Override global skills directory (supports `${home}`, `${configHome}`) |
 
 ## Skill Format
 

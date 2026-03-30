@@ -1,8 +1,8 @@
-# Code Patch - AI Context
+# Vibe Rules - AI Context
 
 ## Project Overview
 
-Code Patch is a VSCode extension that manages and syncs AI coding agent skills (SKILL.md files) across 18 agents. It provides a Webview dashboard (Vite + React) opened as an editor tab, with local skill management, cross-agent sync, and remote skill marketplace integration.
+Vibe Rules is a VSCode extension that manages and syncs AI coding agent skills (SKILL.md files) across 18 agents. It provides a Webview dashboard (Vite + React) opened as an editor tab, with local skill management, cross-agent sync, and remote skill marketplace integration.
 
 ## Architecture
 
@@ -18,7 +18,7 @@ src/
 │   │   ├── skill-scanner.ts    # Scans SKILL.md files, gray-matter parsing, dedup by name
 │   │   ├── sync-engine.ts      # Copy-based sync (snapshot → parallel write), source-safe
 │   │   ├── diff-engine.ts      # Compares skill content across agents (canonical-first lookup)
-│   │   ├── sync-history.ts     # Persistent sync log (~/.code-patch/sync-history.json, max 100)
+│   │   ├── sync-history.ts     # Persistent sync log (~/.vibe-rules/sync-history.json, max 100)
 │   │   ├── mcp-scanner.ts      # MCP config discovery (5 known locations)
 │   │   └── file-watcher.ts     # SKILL.md change detection via FileSystemWatcher
 │   └── types/
@@ -49,7 +49,7 @@ src/
 - **Path traversal protection** — `isPathInsideSkillsDirs()` validates all file open/delete paths against known skill directories
 - **WebviewPanel** (not WebviewView) — Dashboard opens as editor tab, not sidebar; `retainContextWhenHidden: true`
 - **VSCode CSS Variables** — All colors use `var(--vscode-*)` via `var(--cp-*)` aliases, zero hardcoded colors for main theme
-- **Settings-driven** — Agent dirs and enabled/disabled configurable via `codePatch.agents` in VSCode settings
+- **Settings-driven** — Agent dirs and enabled/disabled configurable via `vibeRules.agents` in VSCode settings
 - **CSP-safe remote fetching** — All HTTP requests go through Extension Host, never from Webview directly
 
 ## Agent System
@@ -95,7 +95,7 @@ Extension <-> Webview communicate via `postMessage`. Full message types:
 | `diff:request` | Compare skill content across all agents |
 | `history:load` / `history:clear` | Manage sync history |
 | `mcps:load` | Scan MCP server configurations |
-| `settings:open` | Open VSCode settings filtered to codePatch |
+| `settings:open` | Open VSCode settings filtered to vibeRules |
 | `remote:search` | Search remote skill marketplace |
 | `remote:install` | Install remote skill to local agent dir |
 | `remote:remove` | Remove installed remote skill |
@@ -124,7 +124,7 @@ Three sources integrated in DashboardViewProvider:
 | Source | Host | Method |
 |--------|------|--------|
 | SkillHub | skillhub.tencent.com | Static CDN JSON, client-side filter, 10min cache |
-| SkillsMP | skillsmp.com | REST API, optional API key (`codePatch.skillsmpApiKey`) |
+| SkillsMP | skillsmp.com | REST API, optional API key (`vibeRules.skillsmpApiKey`) |
 | Skills.sh | skills.sh | SSR HTML regex parsing |
 
 Install flow: fetch raw SKILL.md from source → fallback to metadata-generated file → write to target agent dir.

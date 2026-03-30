@@ -7,396 +7,358 @@
 
 ---
 
-# Code Patch - Deep Review & Optimization Plan
+# Vibe Rules - 项目深度审查与优化计划 v2
 
-> 三位专家（Agent 开发工程师、Vibecoding 专家、产品分析师）对项目进行深度审查的综合报告。
-> 审查覆盖全部 35 个源码文件，共发现 **40+ 个问题**，按严重级别和优先级分层整理。
-
----
-
-## Executive Summary
-
-Code Patch 拥有良好的基础架构：清晰的 Extension/Webview 分离、规范的消息协议、零 `any` 使用、一致的 `readonly` 不可变模式。但存在以下系统性问题：
-
-| 类别 | 核心问题 |
-|------|---------|
-| **安全** | 2 个路径遍历漏洞（webview 可删除/写入任意目录） |
-| **Bug** | 技能创建产生双重 frontmatter、版本号不一致、UI 文案与实现矛盾 |
-| **架构** | App.tsx God Component（15 useState + 25 handler + 大规模 prop drilling） |
-| **DX** | 零可访问性支持、无错误反馈、无加载状态、hover 用 DOM 操作而非 CSS |
-| **产品** | AgentTabs 硬编码 3 个 Agent、无法 re-sync、无首次使用引导、无测试 |
+> 基于全部 45+ 源码文件的逐行审查，覆盖 Extension Host（12 文件）+ Webview（20+ 组件）+ i18n + VibeTips + 构建配置。
+> 上一版审查日期：2026-03-16 | 本次更新：2026-03-28
 
 ---
 
-## P0: Critical（必须修复，阻塞发布）
+## 项目现状总览
 
-### 1. [安全] 路径遍历 -- `skill:delete` 可删除任意目录
+### 架构概况
 
-- **文件**: `src/extension/providers/DashboardViewProvider.ts:207-221`
-- **问题**: `skill:delete` 直接使用 webview 传入的 `filePath`，调用 `rm(path.dirname(filePath), { recursive: true })`，无路径校验。恶意或被 XSS 的 webview 可发送 `filePath: "/home/user/.ssh/authorized_keys"` 删除任意目录。`skill:openInEditor` 同理可打开任意文件。
-- **修复**:
-  ```typescript
-  const allowedRoots = getAllKnownSkillsDirs(scope, workspaceRoot);
-  const realPath = await fs.promises.realpath(skillFilePath);
-  if (!allowedRoots.some(root => realPath.startsWith(root))) {
-    console.error('[code-patch] Blocked path outside skills dirs:', realPath);
-    return;
-  }
-  ```
+```
+Extension Host (TypeScript/Node, CommonJS)
+├── extension.ts          — 入口，注册 3 个命令 + 文件监视器
+├── providers/
+│   └── DashboardViewProvider.ts (438行) — WebviewPanel 管理 + 14 种消息处理
+├── services/
+│   ├── agent-detector.ts (201行) — Agent 检测/路径解析/配置覆盖
+│   ├── skill-scanner.ts  (159行) — SKILL.md 扫描/解析/去重
+│   ├── sync-engine.ts    (209行) — 快照+复制同步，UUID 命名
+│   ├── diff-engine.ts    (134行) — 跨 Agent 技能差异对比
+│   ├── sync-history.ts   (64行)  — ~/.vibe-rules/sync-history.json 持久化
+│   ├── mcp-scanner.ts    (116行) — 5 处 MCP 配置发现
+│   └── file-watcher.ts   (71行)  — SKILL.md 变更监听
+└── types/
+    ├── agent.ts   (171行) — AGENT_REGISTRY (10 启用 + 8 注释掉)
+    ├── skill.ts   (41行)  — Skill/SyncResult/SyncReport 接口
+    └── messages.ts (125行) — Extension↔Webview 消息类型定义
 
-### 2. [安全] 路径遍历 -- `skill:create` 可写入任意位置
+Webview (Vite + React + Tailwind, ESNext)
+├── App.tsx (576行)        — 全局状态编排 (12+ useState)
+├── components/
+│   ├── layout/            — Header(148) Sidebar(206) MainContent(174) RightPanel(155)
+│   ├── skill/             — SkillList(276) SkillDetail(112) SyncDialog(234)
+│   │                        CreateSkillDialog(178) DiffPreview(150) SyncHistory(138)
+│   ├── agent/             — AgentTabs(96) AgentStatusBadge(28)
+│   ├── mcp/               — McpList(92)
+│   ├── settings/          — SettingsPanel(349)
+│   ├── common/            — SearchInput(47) ScopeToggle(36) ConfirmDialog(83) ResizeHandle(66)
+│   └── vibetips/          — VibeTipsPanel(107) VibeTipsCard(114) VibeTipsHots(119)
+│                            VibeTipsMCPs(70) VibeTipsSkills(56)
+├── hooks/                 — useSkills(88) useAgents(36) useVSCodeApi(21)
+├── services/              — vscode-message.ts(43)
+├── i18n/                  — I18nContext(45) useI18n(14) en.ts(138) zh.ts(138)
+├── data/                  — vibetips-data.ts(538) — 框架/技能/MCP 精选数据
+└── styles/                — index.css(202) — CSS 变量 + Tailwind + 动画
+```
 
-- **文件**: `src/extension/providers/DashboardViewProvider.ts:177-203`
-- **问题**: `skill:create` 使用 `message.payload.name` 直接拼接路径，名称如 `../../.ssh/authorized_keys` 可逃逸 skills 目录。虽然前端有 slugify，但 extension host 不应信任 webview 边界。
-- **修复**:
-  ```typescript
-  const safeName = path.basename(message.payload.name).replace(/[^a-z0-9_-]/gi, '');
-  if (!safeName || safeName !== message.payload.name) {
-    vscode.window.showErrorMessage('Invalid skill name');
-    return;
-  }
-  ```
+### 关键指标
 
-### 3. [Bug] 技能创建产生双重 frontmatter
+| 指标 | 数值 |
+|------|------|
+| 总文件数 | 45+ |
+| 总代码行数 | ~5,500+ |
+| 启用 Agent 数 | 10（8 个被注释掉） |
+| 消息类型数 | Webview→Extension 14 种, Extension→Webview 10 种 |
+| i18n 翻译键数 | 138（英文/中文各一份） |
+| 测试覆盖率 | 0%（零测试） |
+| 版本 | v0.2.0 |
+| 远程市场功能 | 未实现（CLAUDE.md 描述存在但代码中未实现） |
 
-- **文件**: `src/webview/components/skill/CreateSkillDialog.tsx:21-23` + `src/extension/providers/DashboardViewProvider.ts:194-197`
-- **问题**: `CreateSkillDialog` 构建内容时已包含 frontmatter（`---\nname:...\n---`），`DashboardViewProvider` 的 `skill:create` handler 又额外拼接了一次 frontmatter，导致创建的 SKILL.md 含有**双重 frontmatter**，文件格式损坏。
-- **修复**: 二选一 -- 推荐由 extension 端统一生成 frontmatter，webview 仅传原始字段：
-  ```typescript
-  // CreateSkillDialog: only send name, description, content
-  onCreateSkill(slug, content.trim());
-  // DashboardViewProvider: build complete content
-  const fullContent = `---\nname: ${name}\ndescription: "${desc}"\n---\n\n${content}`;
-  ```
+### 上一版问题修复进度
 
-### 4. [DX] 零可访问性支持
+| # | 问题 | 状态 | 备注 |
+|---|------|------|------|
+| 1 | 路径遍历 - skill:delete | ✅ 已修复 | `isPathInsideSkillsDirs()` 路径验证 |
+| 2 | 路径遍历 - skill:create | ✅ 已修复 | `path.basename()` + 正则消毒 |
+| 3 | 双重 frontmatter | ✅ 已修复 | webview 仅传字段，extension 统一构建 |
+| 6 | applyOverrides 映射 | ✅ 已修复 | `ownSkillsDir` 保留原值 |
+| 7 | 错误反馈缺失 | ✅ 已修复 | `error:occurred` 消息 + toast |
+| 9 | AgentTabs 硬编码 | ✅ 已修复 | 从 agents prop 动态生成 |
+| 10 | Nonce 使用 Math.random | ✅ 已修复 | `crypto.randomBytes(16)` |
+| 11 | 快照目录碰撞 | ✅ 已修复 | `crypto.randomUUID()` |
+| 22 | 动态 import 冗余 | ✅ 已修复 | 统一静态导入 |
+| 27 | 版本号不一致 | ✅ 已修复 | i18n 统一 v0.2.0 |
+| 28 | "Symlink Sync" 标签 | ✅ 已修复 | 改为 "Copy Sync" |
+| 12 | handleMessage God Method | ⚠️ 部分修复 | 仍 270 行，有 try-catch 但未拆分 |
+| 21 | workspaceRoot 保护 | ⚠️ 部分修复 | 可选链但无显式提示 |
+| 5 | App.tsx God Component | ❌ 未修复 | 576 行，12+ useState |
+| 8 | SyncDialog re-sync | ❌ 未修复 | 仍过滤已有技能的 Agent |
+
+**修复率：11/15 完全修复，2/15 部分修复，2/15 未修复**
+
+### 新增功能（自上次审查后）
+
+1. **i18n 国际化系统** — React Context + useI18n hook，支持英文/中文切换，138 个翻译键
+2. **VibeTips 功能** — 新数据源标签页，展示热门框架、精选技能/MCP、编程技巧，538 行静态数据
+3. **Agent 注册表扩展** — 新增 Kimi Code CLI、Qwen Code 等，总计 18 个 Agent（10 启用 + 8 注释掉）
+4. **设置面板增强** — Agent 启用/禁用开关、语言切换、JSON 配置文件打开
+
+---
+
+## 遗留问题（仍需修复）
+
+### P1-1. [架构] App.tsx God Component（原 #5，未修复）
+
+- **文件**: `src/webview/App.tsx`（576 行）
+- **现状**: 12+ 个 `useState`、~20 个 callback handler，Sidebar 接收 17 个 props。新增 VibeTips 和 i18n 后行数从 503 增长到 576。
+- **影响**: 任何新功能都必须修改此文件，prop drilling 导致组件间耦合严重。
+- **修复**: 按领域拆分 Context + useReducer：
+  - `SkillContext` — skills, selectedSkill, scope, agentFilter, searchQuery
+  - `SyncContext` — syncNotification, syncStats, agentsWithSkill
+  - `SelectionContext` — multiSelect, selectedSkillNames
+  - `UIContext` — dialogs, panels, locale, source
+
+### P1-2. [UX] SyncDialog 无法 re-sync（原 #8，未修复）
+
+- **文件**: `src/webview/components/skill/SyncDialog.tsx:28-30`
+- **现状**: `availableAgents.filter((a) => a.installed && !agentsWithSkill.has(a.name))` 仍然过滤掉已拥有技能的 Agent。
+- **影响**: 技能更新后无法推送到已部署的 Agent，阻断核心同步工作流。
+- **修复**: 显示所有已安装 Agent，已同步的标注状态并允许强制覆盖。
+
+### P1-3. [架构] handleMessage God Method（原 #12，部分修复）
+
+- **文件**: `src/extension/providers/DashboardViewProvider.ts:129-399`（270 行）
+- **现状**: 14 个 case 分支，虽增加了统一 try-catch 但未提取为独立 handler。
+- **修复**: 提取为 handler 注册表模式，每个 case 独立函数。
+
+### P1-4. [DX] workspaceRoot 保护不完整（原 #21，部分修复）
+
+- **文件**: `src/extension/providers/DashboardViewProvider.ts:133`
+- **现状**: 使用可选链 `workspaceFolders?.[0]?.uri.fsPath`，但 project scope 操作时不提示用户。
+- **修复**: project scope 操作前检查 `workspaceRoot`，为空时弹出提示引导打开文件夹。
+
+### P2-1. [DX] 零可访问性支持（原 #4，未修复）
 
 - **范围**: 全部 webview 组件
-- **问题**: 整个 webview 无任何 `aria-*`、`role`、`tabIndex`、`onKeyDown` 属性。5 个模态对话框无 `role="dialog"`、无焦点陷阱、无 Escape 关闭。自定义右键菜单（`SkillList.tsx:192-245`）仅支持鼠标。VSCode 扩展应满足基本无障碍标准。
-- **修复**:
-  - 所有对话框添加 `role="dialog"` + `aria-modal="true"` + `aria-labelledby`
-  - 实现焦点陷阱 + Escape 关闭
-  - 交互元素添加 `tabIndex={0}` + 键盘事件
-  - 添加 `:focus-visible` 样式
-  - 图标按钮添加 `aria-label`
+- **现状**: 仍无 `aria-*`、`role`、焦点管理。部分对话框支持 Escape 关闭，但无焦点陷阱。
+- **修复**: 分批添加：先对话框 `role="dialog"` + 焦点陷阱，再交互元素 `tabIndex` + 键盘事件。
 
----
+### P2-2. [性能] 多个性能问题（原 #14/16/17/18/19）
 
-## P1: High（显著影响用户体验或代码质量）
+- `scanSkills` 顺序扫描 36 个目录（#16）
+- `findAgentsWithSkill` 无缓存（#17）
+- `getSkillByName` 全量扫描（#18）
+- 批量同步无并发控制（#19）
+- 无 `React.memo` / `useMemo`（#14）
 
-### 5. [架构] App.tsx God Component
-
-- **文件**: `src/webview/App.tsx`（503 行）
-- **问题**: 15 个 `useState`、~25 个 callback handler、Sidebar 接收 17 个 props、MainContent 接收 12 个 props。违反 SRP，新增功能必须修改此文件，认知负荷极高。
-- **修复**: 按领域拆分 React Context：
-  - `SyncContext` -- syncNotification, syncStats, pendingSyncSkill, agentsWithSkill
-  - `SelectionContext` -- multiSelect, selectedSkillNames 及其 handler
-  - `DialogContext` -- showCreateDialog, deleteTargets, diffReport, showHistory, showSettings
-  - 使用 `useReducer` 管理关联状态
-
-### 6. [Bug] `applyOverrides` 错误映射 `skillsDir` 到 `ownSkillsDir`
-
-- **文件**: `src/extension/services/agent-detector.ts:48`
-- **问题**: 用户设置 `codePatch.agents.cursor.skillsDir` 覆盖时，代码同时覆盖 `ownSkillsDir`（写入目录）。对于 universal agent（如 Cursor 读 `.agents/skills` 但写 `.cursor/skills`），这会导致数据写入错误目录。
-- **修复**: 不将 `skillsDir` 覆盖应用到 `ownSkillsDir`：
-  ```typescript
-  ownSkillsDir: agent.ownSkillsDir, // preserve original, do not override from skillsDir
-  ```
-
-### 7. [DX] 错误反馈完全缺失
-
-- **文件**: `src/extension/providers/DashboardViewProvider.ts:264-266`
-- **问题**: `handleMessage` 的 catch 仅 `console.error`，永远不向 webview 发送错误消息。用户操作失败时 UI 无任何反馈，表现为"卡住"。`ExtensionMessage` 类型无错误变体。
-- **修复**:
-  - 在 `messages.ts` 添加 `{ type: "error:occurred"; payload: { operation: string; message: string } }`
-  - catch 块发送错误消息到 webview
-  - webview 添加错误 toast/banner 组件
-  - 异步操作添加 loading/pending 状态
-
-### 8. [UX] SyncDialog 无法 re-sync 已有技能
-
-- **文件**: `src/webview/components/skill/SyncDialog.tsx:20-22`
-- **问题**: `SyncDialog` 隐藏已有该技能的 Agent，导致无法推送更新版本。这阻断了核心同步工作流 -- 技能更新后无法同步到已部署的 Agent。
-- **修复**: 显示所有 Agent，已有的标注 "已同步" 并允许确认后强制覆盖。
-
-### 9. [UX] AgentTabs 硬编码 3 个 Agent
-
-- **文件**: `src/webview/components/agent/AgentTabs.tsx:8-13`
-- **问题**: Tab 列表硬编码为 `["Claude Code", "Codex", "OpenCode", "All"]`，注册表中 18 个 Agent 仅 3 个有专属 Tab。Cursor、Windsurf、Gemini CLI 等用户无法按 Agent 筛选。违反 OCP。
-- **修复**: 从检测到的已安装 Agent 列表动态生成 Tab。
-
-### 10. [安全] Nonce 生成使用 `Math.random()`
-
-- **文件**: `src/extension/providers/DashboardViewProvider.ts:302-310`
-- **问题**: CSP nonce 用 `Math.random()` 生成，非密码学安全，削弱 CSP 防护。
-- **修复**: 使用 `crypto.randomBytes(16).toString('base64')`。
-
-### 11. [Bug] 快照目录名碰撞
-
-- **文件**: `src/extension/services/sync-engine.ts:169`
-- **问题**: 快照目录以 `Date.now()` 为后缀，毫秒内并发同步时名称碰撞导致数据损坏。
-- **修复**: 使用 `crypto.randomUUID()` 替代 `Date.now()`。
-
-### 12. [DX] `handleMessage` 是 170+ 行的 God Method
-
-- **文件**: `src/extension/providers/DashboardViewProvider.ts:90-267`
-- **问题**: 13 个 case 分支混合技能加载、同步、创建、删除、MCP 扫描、Diff、历史管理。圈复杂度高，难以测试和维护。
-- **修复**: 提取为 handler 注册表：
-  ```typescript
-  private readonly handlers: Record<string, (payload: any) => Promise<void>> = {
-    'skills:load': (p) => this.handleSkillsLoad(p),
-    'sync:execute': (p) => this.handleSyncExecute(p),
-    // ...
-  };
-  ```
-
----
-
-## P2: Medium（代码质量与性能优化）
-
-### 13. [DX] Hover 样式使用命令式 DOM 操作
+### P2-3. [DX] Hover 样式用命令式 DOM（原 #13，未修复）
 
 - **范围**: SkillList, MainContent, Header, SettingsPanel, McpList（~20 处）
-- **问题**: 所有 hover 效果通过 `onMouseEnter/onMouseLeave` 修改 `style` 实现，导致不必要重渲染、状态可能卡住、代码冗长。
-- **修复**: 用 Tailwind `hover:bg-[var(--cp-list-hover)]` 或 CSS class 替代。
+- **修复**: 迁移到 Tailwind `hover:` 或 CSS class。
 
-### 14. [性能] 无 `useMemo` / `React.memo`
+### P2-4. [DRY] 类型定义重复（原 #15，未修复）
 
-- **范围**: 全部 webview 组件
-- **问题**: 15 个 useState 中任一变化触发整棵树重渲染，包括 ReactMarkdown（昂贵）。无列表虚拟化，100+ 技能时性能堪忧。
-- **修复**: 对 SkillList、SkillDetail、RightPanel 添加 `React.memo()`；对过滤结果使用 `useMemo`。
+- `DiffEntry` 和 `SyncHistoryEntry` 在 extension 和 webview 各定义一次。
+- **修复**: 创建 `src/shared/types/` 目录，两个 tsconfig 共享。
 
-### 15. [DRY] 类型定义三处重复
+### P2-5. [DX] 缺少 Error Boundary（原 #25，未修复）
 
-- **文件**: `DiffEntry` 定义在 diff-engine.ts / messages.ts / DiffPreview.tsx 三处；`SyncHistoryEntry` 同理。
-- **修复**: 创建 shared types 目录或统一在 `types/` 中定义，两个 tsconfig 共享。
+### P2-6. [DX] Webview 状态不持久化（原 #26，未修复）
 
-### 16. [性能] `scanSkills` 顺序扫描 36 个目录
+### P2-7. [Bug] syncHistory 竞态条件（原 #23，未修复）
 
-- **文件**: `src/extension/services/skill-scanner.ts:115-126`
-- **问题**: 嵌套 for 循环依次 await 每个目录，18 Agent x 2 scope = 36 次顺序 I/O。
-- **修复**: `Promise.all()` 并行扫描。
+### P3-1. [DX] 151 处内联 style（原 #32，未修复）
 
-### 17. [性能] `findAgentsWithSkill` 每次重新检测所有 Agent
+### P3-2. [UX] 搜索仅匹配 name（原 #33，未修复）
 
-- **文件**: `src/extension/services/agent-detector.ts:155-178`
-- **问题**: 每次调用都探测 18 个 Agent 的文件系统，无缓存。
-- **修复**: 添加 10 秒 TTL 缓存。
-
-### 18. [性能] `getSkillByName` 全量扫描
-
-- **文件**: `src/extension/services/skill-scanner.ts:144-151`
-- **问题**: 查找单个技能时扫描所有技能再过滤，O(n) 文件 I/O。
-- **修复**: 直接按路径查找 `path.join(dir, name, 'SKILL.md')`。
-
-### 19. [性能] 批量同步无并发控制
-
-- **文件**: `src/extension/providers/DashboardViewProvider.ts:146-155`
-- **问题**: `Promise.all` 同时发起所有同步，50 技能 x 18 Agent = 900 并发文件操作。
-- **修复**: 添加并发限制（如 `p-limit` 或分批处理，每批 10 个）。
-
-### 20. [Bug] 重复搜索输入
-
-- **文件**: `src/webview/components/layout/Sidebar.tsx:98` + `src/webview/components/layout/MainContent.tsx:166`
-- **问题**: 两个 SearchInput 绑定同一 state，输入任一个更新另一个，违反"单一交互源"原则。
-- **修复**: 移除其中一个，推荐保留 Sidebar 中的。
-
-### 21. [Bug] 缺少 `workspaceRoot` 保护
-
-- **文件**: `src/extension/providers/DashboardViewProvider.ts:94`
-- **问题**: 无文件夹打开时 `workspaceRoot` 为 `undefined`，project scope 操作静默失败，用户收到误导性错误信息。
-- **修复**: 操作前检查并提示用户打开文件夹。
-
-### 22. [DX] 动态 import 已静态导入的模块
-
-- **文件**: `src/extension/providers/DashboardViewProvider.ts:179-180,192,210`
-- **问题**: `skill:create` 和 `skill:delete` 使用 `await import("../services/agent-detector")` 但该模块已在文件顶部静态导入。
-- **修复**: 使用已有的静态导入。
-
-### 23. [Bug] `syncHistory` 竞态条件
-
-- **文件**: `src/extension/services/sync-history.ts`
-- **问题**: 两个并发同步同时 `loadSyncHistory()` -> 追加 -> 写回，一条记录丢失。
-- **修复**: 使用文件锁或队列化写入。
-
-### 24. [健壮性] `copyDir` 不处理目录内的符号链接
-
-- **文件**: `src/extension/services/sync-engine.ts:19-33`
-- **问题**: 如果技能目录包含符号链接的子目录，`isDirectory()` 返回 false，子目录被静默跳过。
-- **修复**: 添加 `isSymbolicLink()` 检查并 follow 链接。
-
-### 25. [DX] 缺少 Error Boundary
-
-- **范围**: 全部 webview
-- **问题**: ReactMarkdown 渲染异常等任何组件崩溃直接白屏，无恢复路径。
-- **修复**: 在 App 层和关键子树添加 ErrorBoundary 组件。
-
-### 26. [DX] Webview 状态不持久化
-
-- **文件**: `src/webview/services/vscode-message.ts:7-8`
-- **问题**: `vscodeApi.getState()/setState()` 已声明但从未使用。Webview 隐藏再显示时丢失所有客户端状态（选中技能、面板宽度、搜索词、Tab）。
-- **修复**: 在状态变化时 `setState()`，初始化时 `getState()` 恢复。
+### P3-3. [UX] 无首次使用引导（原 #34，未修复）
 
 ---
 
-## P3: Low（锦上添花）
+## 新发现问题
 
-### 27. [Bug] 版本号不一致
+### N1. [架构] AGENT_REGISTRY 有 8 个 Agent 被注释掉
 
-- **文件**: `src/webview/components/settings/SettingsPanel.tsx:124`（显示 v0.1.0）vs `package.json`（v0.2.0）
-- **修复**: 动态读取版本或更新硬编码值。
+- **文件**: `src/extension/types/agent.ts`
+- **问题**: Windsurf、Augment、Continue、Goose、Kilo、Trae、Amp、Junie 等 8 个 Agent 被注释掉，但 CLAUDE.md 和 README 均声称支持 18 个 Agent。这导致文档与实际不一致。
+- **建议**: 要么启用这些 Agent（按 CLAUDE.md 路径配置），要么更新文档反映实际支持数。
 
-### 28. [Bug] "Symlink Sync" 误导标签
+### N2. [架构] 远程技能市场功能未实现
 
-- **文件**: `src/webview/components/layout/RightPanel.tsx:83`
-- **问题**: "Active Features" 列出 "Symlink Sync"，但项目设计决策明确为"No symlinks -- copy mode only"。
-- **修复**: 改为 "Copy Sync" 或移除。
+- **文件**: 缺失 `src/webview/services/remote-skill-api.ts`
+- **问题**: CLAUDE.md 详细描述了三个远程源（SkillHub、SkillsMP、Skills.sh）的集成，messages.ts 定义了 `remote:search/install/remove` 消息类型，但实际代码中：
+  - 不存在 `remote-skill-api.ts` 文件
+  - DashboardViewProvider 无 `remote:*` 消息处理
+  - Webview 无 RemoteSkillPanel 组件
+- **影响**: CLAUDE.md 描述与实际实现严重不符，误导开发者。
+- **建议**: 从 CLAUDE.md 中移除未实现功能的描述，或作为后续功能规划。
 
-### 29. [DX] ConfirmDialog 硬编码 `#fff`
+### N3. [Bug] extension.ts 三个命令功能重复
 
-- **文件**: `src/webview/components/common/ConfirmDialog.tsx:62`
-- **问题**: 唯一一处硬编码颜色，违反 CSS 变量约定。
-- **修复**: 使用 `var(--cp-primary-fg)`。
+- **文件**: `src/extension/extension.ts`（39 行）
+- **问题**: `vibeRules.openDashboard`、`vibeRules.refreshSkills`、`vibeRules.syncSkill` 三个命令都只是打开仪表板。`refreshSkills` 执行 webview 重载命令，`syncSkill` 与 `openDashboard` 完全相同。
+- **建议**:
+  - `refreshSkills` 应向已打开的 webview 发送刷新消息，而非重载
+  - `syncSkill` 应打开仪表板并自动进入同步流程，或接受参数
 
-### 30. [DX] SkillList 使用 `skill.name` 作为 React key
+### N4. [i18n] 国际化覆盖不完整
 
-- **文件**: `src/webview/components/skill/SkillList.tsx:126`
-- **问题**: "All" 视图下不同 Agent 可能有同名技能，key 不唯一。
-- **修复**: 使用 `skill.filePath` 作为 key。
+- **范围**: 多个组件
+- **问题**: 虽然 i18n 系统已建立（138 个翻译键），但以下地方仍有硬编码文本：
+  - SyncDialog 中 "全选"/"Select All" 手动判断 locale
+  - ConfirmDialog "Cancel" 按钮未翻译
+  - SettingsPanel 中 "copy"、"extension" 等信息未翻译
+  - SkillList 中 Agent 徽章缩写（19 个硬编码映射）
+  - DiffPreview 中状态文案
+  - 部分 placeholder 和 tooltip 未翻译
+- **建议**: 统一通过 `t()` 函数翻译，移除所有内联 locale 判断。
 
-### 31. [DX] diff-engine 内联 `require("os")`
+### N5. [DX] SkillList Agent 徽章硬编码 19 个映射
 
-- **文件**: `src/extension/services/diff-engine.ts:103`
-- **问题**: 混用 CJS `require` 和 ESM `import`，风格不一致。
-- **修复**: 使用顶层 `import * as os from "os"`。
+- **文件**: `src/webview/components/skill/SkillList.tsx` — `getAgentBadge()` 函数
+- **问题**: 手动维护 19 个 Agent 名称到 2-3 字母缩写的映射。新增 Agent 时需同时修改此函数。
+- **建议**: 将徽章信息移入 `AGENT_REGISTRY` 或新建 Agent 元数据映射，单一数据源。
 
-### 32. [DX] 151 处内联 `style={}` 属性
+### N6. [DX] VibeTips 静态数据维护负担
 
-- **范围**: 全部 webview 组件
-- **问题**: 每个组件用内联 style 设置 CSS 变量颜色，JSX 冗长。
-- **修复**: 迁移到 Tailwind 任意值语法或 CSS class。
+- **文件**: `src/webview/data/vibetips-data.ts`（538 行）
+- **问题**: 框架星级（如 "93K"）、URL、描述等硬编码，无法自动更新。随时间推移数据会过时。
+- **建议**: 考虑远程 JSON + 本地缓存机制，或至少在数据文件中标注 `lastUpdated` 供人工定期维护。
 
-### 33. [UX] 搜索仅匹配 name
+### N7. [UX] RightPanel 相对时间不实时更新
 
-- **文件**: `src/webview/hooks/useSkills.ts`
-- **问题**: 搜索仅过滤 `s.name.toLowerCase().includes(query)`，不搜索 description 或 content。
-- **修复**: 扩展搜索范围到 description 和 tags。
+- **文件**: `src/webview/components/layout/RightPanel.tsx`
+- **问题**: `formatRelativeTime()` 在渲染时计算 "5m ago"，但组件不会自动重渲染，时间显示永远停留在首次渲染值。
+- **建议**: 添加 `useEffect` + `setInterval(60000)` 定时刷新。
 
-### 34. [UX] 无首次使用引导
+### N8. [DX] CSS 变量回退值仅适配深色主题
 
-- **范围**: 全部 webview
-- **问题**: 空状态仅显示 "No skills found"，无 Agent 检测结果展示、无创建引导。
-- **修复**: 添加 empty-state 引导组件，展示检测到的 Agent、创建技能入口。
+- **文件**: `src/webview/styles/index.css`
+- **问题**: CSS 变量 `--cp-*` 的回退值全部为深色主题颜色。VSCode 浅色主题下，如果 `var(--vscode-*)` 变量未生效，UI 会显示为深色背景+深色文字，不可读。
+- **建议**: 添加 `prefers-color-scheme: light` 媒体查询或检测 VSCode 主题类型。
+
+### N9. [Bug] SearchInput 缺少防抖
+
+- **文件**: `src/webview/components/common/SearchInput.tsx`
+- **问题**: 每次按键触发 `onChange`，连锁触发 `skills:load` 消息到 extension host。快速输入时产生大量无效的文件扫描。
+- **建议**: 添加 300ms 防抖。
+
+### N10. [Bug] SyncHistory 清空无确认
+
+- **文件**: `src/webview/components/skill/SyncHistory.tsx`
+- **问题**: 清空历史按钮直接执行，无确认对话框。误触后数据不可恢复。
+- **建议**: 使用 ConfirmDialog 确认。
+
+### N11. [DX] CreateSkillDialog 缺少重名和内容验证
+
+- **文件**: `src/webview/components/skill/CreateSkillDialog.tsx`
+- **问题**:
+  - 不检查技能名称是否已存在（静默覆盖）
+  - 允许提交空内容
+  - Slug 转换可能将有意义的名称变为无法识别的形式
+- **建议**: 创建前通过消息查询重名，空内容时禁用提交。
 
 ---
 
-## Product Gaps（产品功能缺失）
+## 产品功能缺口
 
-### 35. Agent 检测可靠性
+### G1. 远程技能市场（未实现）
 
-- **问题**: `isAgentInstalled` 仅检查全局 skills 目录是否存在，已卸载但留有目录的 Agent 误报为已安装，新安装未创建目录的 Agent 误报为未安装。
-- **建议**: 增加二进制/IDE 存在性检测或多信号综合判断。
+CLAUDE.md 和 messages.ts 已定义完整的远程技能市场方案（SkillHub、SkillsMP、Skills.sh），但代码未实现。这是产品最大的功能缺口。
 
-### 36. MCP Tab 定位模糊
+### G2. Agent 检测可靠性（原 #35）
 
-- **问题**: MCP 扫描为只读发现功能，但 Tab 未标明"Discovery"，用户可能期望管理功能。
-- **建议**: 明确标注为 "MCP Discovery" 或添加基础管理能力。
+仅检查 skills 目录存在性，误报率高。
 
-### 37. 无测试基础设施
+### G3. MCP 管理能力（原 #36）
 
-- **问题**: 零测试文件、零测试脚本、零测试依赖。对于执行破坏性文件操作（delete, overwrite）的工具，这是重大安全隐患。
-- **建议**: 优先为 `sync-engine.ts`、`skill-scanner.ts`、`agent-detector.ts` 添加单元测试。
+当前仅为只读发现，无编辑/删除/启用/禁用功能。
 
-### 38. 全局/项目 Scope 技能名称冲突
+### G4. 零测试基础设施（原 #37）
 
-- **问题**: 同名技能存在于全局和项目 scope 时，扫描以 `AGENT_REGISTRY` 顺序首次命中为准，可能静默同步错误版本。
-- **建议**: 在技能列表中显示 scope 来源，冲突时提示用户选择。
+对于执行文件删除/覆盖的工具，零测试是重大风险。
 
-### 39. 多根工作区支持
+### G5. Scope 冲突处理（原 #38）
 
-- **问题**: 仅读取 `workspaceFolders?.[0]`，忽略多根工作区的其他文件夹。
-- **建议**: 支持多根工作区或明确文档说明限制。
+同名技能跨 scope 时无提示。
 
-### 40. 技能创建重名检查
+### G6. 多根工作区支持（原 #39）
 
-- **问题**: 创建已存在 slug 的技能时静默覆盖 SKILL.md，无确认。
-- **建议**: 创建前检查重名并提示用户。
+仅读取第一个 workspace folder。
+
+### G7. 技能编辑能力
+
+当前只能查看和在 VSCode 中打开编辑。可考虑内嵌编辑器支持快速修改。
 
 ---
 
-## Implementation Roadmap
+## 优秀实践（确认保持）
 
-### Phase 1: Security & Blocker Fixes（1-2 天）
+1. **零 `any` 使用** — 全代码库无 `any`，TypeScript 类型覆盖完整
+2. **一致的不可变模式** — 所有接口 `readonly`，状态更新返回新对象
+3. **安全的 CSP 实现** — `default-src 'none'` + nonce-based script（已升级为 crypto 生成）
+4. **清晰的关注点分离** — Extension/Webview 通过类型化消息协议通信
+5. **防御性 disposed 检查** — postMessage 和 handleMessage 都检查 `this.disposed`
+6. **Singleton Panel 模式** — `createOrShow` 正确实现单例模式 + dispose 清理
+7. **源安全同步** — UUID 快照机制防止源/目标重叠时的数据损坏
+8. **智能去重** — `scanSkills` 用 `Set<string>` 避免 universal agent 共享目录重复扫描
+9. **路径安全验证** — `isPathInsideSkillsDirs()` + `path.basename()` 消毒（新增）
+10. **完整的 i18n 架构** — Context + Hook + 回退机制 + 参数插值（新增）
 
-> 目标：消除安全漏洞和数据损坏 Bug
+---
 
-- [ ] #1 路径遍历 -- skill:delete 路径校验
-- [ ] #2 路径遍历 -- skill:create 名称消毒
-- [ ] #3 双重 frontmatter 修复
-- [ ] #10 CSP nonce 改用 crypto
-- [ ] #27 版本号修正
-- [ ] #28 "Symlink Sync" 标签修正
+## 更新后的实施路线图
 
-### Phase 2: Core UX Improvements（3-5 天）
+### Phase 1: 文档对齐 + 关键 Bug 修复
 
-> 目标：核心交互流程可用
+> 目标：文档与代码一致，消除用户可见 Bug
 
-- [ ] #7 错误反馈机制（error message type + toast 组件）
-- [ ] #8 SyncDialog 支持 re-sync
-- [ ] #9 AgentTabs 动态化
-- [ ] #4 基础可访问性（Escape 关闭 + tabIndex + aria-label）
-- [ ] #6 applyOverrides 映射修复
-- [ ] #21 workspaceRoot 保护
+- [ ] N2 — 更新 CLAUDE.md，移除未实现的远程市场描述
+- [ ] N1 — 决定注释掉的 8 个 Agent：启用或更新文档
+- [ ] N3 — 修复 3 个命令功能重复
+- [ ] P1-2 — SyncDialog 支持 re-sync
+- [ ] N10 — SyncHistory 清空添加确认
+- [ ] N11 — CreateSkillDialog 重名检查 + 内容验证
+- [ ] P1-4 — workspaceRoot 保护完善
 
-### Phase 3: Architecture Refactor（5-7 天）
+### Phase 2: i18n 完善 + UX 改进
+
+> 目标：国际化全覆盖，交互体验完整
+
+- [ ] N4 — i18n 覆盖不完整的组件（SyncDialog、ConfirmDialog、DiffPreview 等）
+- [ ] N5 — Agent 徽章映射统一到数据源
+- [ ] N9 — SearchInput 防抖
+- [ ] N7 — RightPanel 相对时间实时更新
+- [ ] P3-2 — 搜索扩展到 description + tags
+- [ ] P2-1 — 基础可访问性（对话框 role + Escape + tabIndex）
+
+### Phase 3: 架构重构
 
 > 目标：可维护性和可扩展性
 
-- [ ] #5 App.tsx 拆分（Context + useReducer）
-- [ ] #12 handleMessage handler 注册表
-- [ ] #15 类型定义去重
-- [ ] #25 Error Boundary
-- [ ] #26 Webview 状态持久化
+- [ ] P1-1 — App.tsx 拆分（Context + useReducer）
+- [ ] P1-3 — handleMessage handler 注册表
+- [ ] P2-4 — 创建 shared types，类型定义去重
+- [ ] P2-5 — Error Boundary
+- [ ] P2-6 — Webview 状态持久化
+- [ ] P2-7 — syncHistory 竞态条件修复
 
-### Phase 4: Performance & Polish（3-5 天）
+### Phase 4: 性能优化 + 代码质量
 
 > 目标：大规模使用性能达标
 
-- [ ] #13 hover 样式改用 CSS
-- [ ] #14 React.memo + useMemo
-- [ ] #16 scanSkills 并行化
-- [ ] #17 Agent 检测缓存
-- [ ] #18 getSkillByName 直接查找
-- [ ] #19 批量同步并发控制
-- [ ] #32 内联 style 迁移
+- [ ] P2-2 — scanSkills 并行化 + Agent 检测缓存 + 批量同步并发控制
+- [ ] P2-3 — hover 样式迁移到 CSS/Tailwind
+- [ ] P3-1 — 内联 style 迁移
+- [ ] N8 — CSS 变量浅色主题回退
+- [ ] React.memo + useMemo 优化
 
-### Phase 5: Product Completeness（持续迭代）
+### Phase 5: 产品完整性
 
-> 目标：产品体验闭环
+> 目标：功能闭环，可发布状态
 
-- [ ] #37 测试基础设施搭建
-- [ ] #34 首次使用引导
-- [ ] #35 Agent 检测增强
-- [ ] #33 搜索增强（description + tags）
-- [ ] #38 Scope 冲突处理
-- [ ] #40 创建重名检查
+- [ ] G4 — 测试基础设施搭建（优先 sync-engine、skill-scanner）
+- [ ] G1 — 远程技能市场实现
+- [ ] G3 — MCP 基础管理能力
+- [ ] P3-3 — 首次使用引导
+- [ ] G2 — Agent 检测增强
+- [ ] G5 — Scope 冲突处理
 
 ---
 
-## Positive Observations
-
-审查同时确认了项目的多个优秀实践：
-
-1. **零 `any` 使用** -- 全代码库无 `any`，TypeScript 类型覆盖完整
-2. **一致的不可变模式** -- 所有接口 `readonly`，状态更新返回新对象
-3. **正确的 CSP 实现** -- `default-src 'none'` + nonce-based script（需升级 nonce 生成）
-4. **清晰的关注点分离** -- Extension/Webview 通过类型化消息协议通信
-5. **防御性 disposed 检查** -- postMessage 和 handleMessage 都检查 `this.disposed`
-6. **Singleton Panel 模式** -- `createOrShow` 正确实现单例模式 + dispose 清理
-7. **源安全同步** -- 快照机制防止源/目标重叠时的数据损坏
-8. **智能去重** -- `scanSkills` 用 `Set<string>` 避免 universal agent 共享目录重复扫描
-
----
-
-*Generated by 3-agent deep review team: Agent Development Engineer (code-reviewer/opus) + Vibecoding Expert (critic/opus) + Product Analyst (analyst/opus)*
-*Date: 2026-03-16*
+*初版审查: 2026-03-16 (3-agent deep review team)*
+*本次更新: 2026-03-28 (Claude Opus 4.6 全量代码审查，覆盖 45+ 文件)*
