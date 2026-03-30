@@ -1,9 +1,9 @@
 {
-  "name": "code-patch",
-  "displayName": "Code Patch",
+  "name": "viberules",
+  "displayName": "Vibe Rules",
   "description": "Unified skill manager for AI coding agents — sync skills across Claude Code, Codex, OpenCode, Cursor and more.",
   "version": "0.2.0",
-  "publisher": "code-patch",
+  "publisher": "VibeRules",
   "license": "MIT",
   "engines": {
     "vscode": "^1.85.0"
@@ -16,34 +16,34 @@
   "contributes": {
     "commands": [
       {
-        "command": "codePatch.openDashboard",
-        "title": "Code Patch: Open Dashboard",
+        "command": "viberules.openDashboard",
+        "title": "Vibe Rules: Open Dashboard",
         "icon": {
           "light": "media/icon.svg",
           "dark": "media/icon.svg"
         }
       },
       {
-        "command": "codePatch.syncSkill",
-        "title": "Code Patch: Sync Skill"
+        "command": "viberules.syncSkill",
+        "title": "Vibe Rules: Sync Skill"
       },
       {
-        "command": "codePatch.refreshSkills",
-        "title": "Code Patch: Refresh Skills"
+        "command": "viberules.refreshSkills",
+        "title": "Vibe Rules: Refresh Skills"
       }
     ],
     "menus": {
       "editor/title": [
         {
-          "command": "codePatch.openDashboard",
+          "command": "viberules.openDashboard",
           "group": "navigation"
         }
       ]
     },
     "configuration": {
-      "title": "Code Patch",
+      "title": "Vibe Rules",
       "properties": {
-        "codePatch.agents": {
+        "vibeRules.agents": {
           "type": "object",
           "description": "Per-agent configuration overrides. Key is agent name (e.g. 'claude-code'), value is an object with 'enabled' (boolean) and optional 'skillsDir' / 'globalSkillsDir' overrides.",
           "default": {},
@@ -67,7 +67,7 @@
           }
         }
       },
-      "codePatch.language": {
+      "vibeRules.language": {
         "type": "string",
         "enum": ["en", "zh"],
         "default": "en",
