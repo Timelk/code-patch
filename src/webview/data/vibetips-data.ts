@@ -156,14 +156,14 @@ export const TIPS: readonly Tip[] = [
   {
     title: "MCP Server Discovery",
     emoji: "\u{1F50D}",
-    summary: "Use Code Patch to scan and inventory all MCP servers across your agents.",
-    detail: "Code Patch scans 5 known config locations (Claude, Cursor, Windsurf, etc.) to show all MCP servers in one view. Helps avoid duplicate or conflicting server configs.",
+    summary: "Use Vibe Rules to scan and inventory all MCP servers across your agents.",
+    detail: "Vibe Rules scans 5 known config locations (Claude, Cursor, Windsurf, etc.) to show all MCP servers in one view. Helps avoid duplicate or conflicting server configs.",
   },
   {
     title: "Diff Before Sync",
     emoji: "\u{1F4CA}",
     summary: "Always review skill differences across agents before syncing.",
-    detail: "Different agents may have diverged copies of the same skill. Code Patch's diff engine shows content differences across all agents so you can sync the right version.",
+    detail: "Different agents may have diverged copies of the same skill. Vibe Rules' diff engine shows content differences across all agents so you can sync the right version.",
   },
 ];
 

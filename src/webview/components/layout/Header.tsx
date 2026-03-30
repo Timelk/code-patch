@@ -43,7 +43,7 @@ export const Header: FC<HeaderProps> = ({
             </svg>
           </div>
           <h1 className="text-sm font-bold tracking-tight" style={{ color: "var(--cp-text)", fontFamily: "var(--vscode-editor-font-family, monospace)" }}>
-            code patch
+            vibe rules
           </h1>
         </div>
         <div className="flex items-center gap-0.5">

@@ -236,7 +236,7 @@ export class DashboardPanel {
       case "skill:openInEditor": {
         const openPath = message.payload.path;
         if (!(await isPathInsideSkillsDirs(openPath, this.currentScope, workspaceRoot))) {
-          console.error("[code-patch] Blocked opening path outside skills dirs:", openPath);
+          console.error("[vibe-rules] Blocked opening path outside skills dirs:", openPath);
           break;
         }
         const uri = vscode.Uri.file(openPath);
@@ -284,13 +284,13 @@ export class DashboardPanel {
           const skillDir = path.dirname(skillFilePath);
           // Validate path is inside a known skills directory
           if (!(await isPathInsideSkillsDirs(skillDir, this.currentScope, workspaceRoot))) {
-            console.error("[code-patch] Blocked deletion of path outside skills dirs:", skillDir);
+            console.error("[vibe-rules] Blocked deletion of path outside skills dirs:", skillDir);
             break;
           }
           try {
             await fs.promises.rm(skillDir, { recursive: true });
           } catch (err) {
-            console.error(`[code-patch] Failed to delete ${skillDir}:`, err);
+            console.error(`[vibe-rules] Failed to delete ${skillDir}:`, err);
           }
           const updated = await scanSkills(this.currentScope, workspaceRoot, this.currentAgentFilter);
           this.postMessage({ type: "skills:loaded", payload: updated });
@@ -336,12 +336,12 @@ export class DashboardPanel {
         break;
       }
       case "settings:open":
-        await vscode.commands.executeCommand("workbench.action.openSettings", "codePatch");
+        await vscode.commands.executeCommand("workbench.action.openSettings", "vibeRules");
         break;
 
       case "agent:toggle": {
         const { agentName: toggleName, enabled: toggleEnabled } = message.payload;
-        const config = vscode.workspace.getConfiguration("codePatch");
+        const config = vscode.workspace.getConfiguration("vibeRules");
         const current = config.get<Record<string, any>>("agents") ?? {};
         const agentOverride = current[toggleName] ?? {};
         const updatedConfig = {
@@ -369,14 +369,14 @@ export class DashboardPanel {
       }
 
       case "language:load": {
-        const lang = vscode.workspace.getConfiguration("codePatch").get<string>("language") ?? "en";
+        const lang = vscode.workspace.getConfiguration("vibeRules").get<string>("language") ?? "en";
         this.postMessage({ type: "language:loaded", payload: { language: lang } });
         break;
       }
 
       case "language:set": {
         const newLang = message.payload.language;
-        await vscode.workspace.getConfiguration("codePatch").update("language", newLang, vscode.ConfigurationTarget.Global);
+        await vscode.workspace.getConfiguration("vibeRules").update("language", newLang, vscode.ConfigurationTarget.Global);
         this.postMessage({ type: "language:loaded", payload: { language: newLang } });
         break;
       }
@@ -388,7 +388,7 @@ export class DashboardPanel {
       }
     }
     } catch (err) {
-      console.error("[code-patch] Error handling message:", message.type, err);
+      console.error("[vibe-rules] Error handling message:", message.type, err);
       this.postMessage({
         type: "error:occurred",
         payload: {
