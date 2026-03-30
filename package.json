@@ -5,6 +5,11 @@
   "version": "0.2.0",
   "publisher": "VibeRules",
   "license": "MIT",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Timelk/vibe-rules"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -69,7 +74,10 @@
       },
       "vibeRules.language": {
         "type": "string",
-        "enum": ["en", "zh"],
+        "enum": [
+          "en",
+          "zh"
+        ],
         "default": "en",
         "description": "Interface display language (English / 中文)."
       }

@@ -1,7 +1,7 @@
 import { type FC } from "react";
 import { VibeTipsCard } from "./VibeTipsCard";
-import { SKILL_MARKETS, FEATURED_SKILLS } from "../../data/vibetips-data";
 import { useI18n } from "../../i18n";
+import { useVibeTipsData } from "../../hooks/useVibeTipsData";
 
 interface VibeTipsSkillsProps {
   readonly onOpenUrl: (url: string) => void;
@@ -9,6 +9,7 @@ interface VibeTipsSkillsProps {
 
 export const VibeTipsSkills: FC<VibeTipsSkillsProps> = ({ onOpenUrl }) => {
   const { t } = useI18n();
+  const { skillMarkets, featuredSkills } = useVibeTipsData();
   return (
     <div className="space-y-6">
       {/* Skill Marketplaces */}
@@ -17,7 +18,7 @@ export const VibeTipsSkills: FC<VibeTipsSkillsProps> = ({ onOpenUrl }) => {
           {t("vt.skillMarkets")}
         </h3>
         <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
-          {SKILL_MARKETS.map((market, i) => (
+          {skillMarkets.map((market, i) => (
             <VibeTipsCard
               key={market.name}
               title={market.name}
@@ -38,7 +39,7 @@ export const VibeTipsSkills: FC<VibeTipsSkillsProps> = ({ onOpenUrl }) => {
           {t("vt.featuredSkills")}
         </h3>
         <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}>
-          {FEATURED_SKILLS.map((skill, i) => (
+          {featuredSkills.map((skill, i) => (
             <VibeTipsCard
               key={skill.name}
               title={skill.name}
@@ -46,7 +47,7 @@ export const VibeTipsSkills: FC<VibeTipsSkillsProps> = ({ onOpenUrl }) => {
               stars={skill.stars}
               tags={skill.tags}
               onClick={skill.url ? () => onOpenUrl(skill.url!) : undefined}
-              animationDelay={(i + SKILL_MARKETS.length) * 50}
+              animationDelay={(i + skillMarkets.length) * 50}
             />
           ))}
         </div>

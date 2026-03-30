@@ -1,7 +1,7 @@
 import { type FC, useMemo } from "react";
 import { VibeTipsCard } from "./VibeTipsCard";
-import { MCP_MARKETS, FEATURED_MCPS } from "../../data/vibetips-data";
 import { useI18n } from "../../i18n";
+import { useVibeTipsData } from "../../hooks/useVibeTipsData";
 
 interface VibeTipsMCPsProps {
   readonly onOpenUrl: (url: string) => void;
@@ -9,17 +9,18 @@ interface VibeTipsMCPsProps {
 
 export const VibeTipsMCPs: FC<VibeTipsMCPsProps> = ({ onOpenUrl }) => {
   const { t } = useI18n();
+  const { mcpMarkets, featuredMcps } = useVibeTipsData();
   // Group featured MCPs by category
   const categorized = useMemo(() => {
-    const groups = new Map<string, typeof FEATURED_MCPS[number][]>();
-    for (const mcp of FEATURED_MCPS) {
+    const groups = new Map<string, typeof featuredMcps[number][]>();
+    for (const mcp of featuredMcps) {
       const cat = mcp.category ?? "Other";
       const list = groups.get(cat) ?? [];
       list.push(mcp);
       groups.set(cat, list);
     }
     return Array.from(groups.entries());
-  }, []);
+  }, [featuredMcps]);
 
   return (
     <div className="space-y-6">
@@ -29,7 +30,7 @@ export const VibeTipsMCPs: FC<VibeTipsMCPsProps> = ({ onOpenUrl }) => {
           {t("vt.mcpMarkets")}
         </h3>
         <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
-          {MCP_MARKETS.map((market, i) => (
+          {mcpMarkets.map((market, i) => (
             <VibeTipsCard
               key={market.name}
               title={market.name}
@@ -59,7 +60,7 @@ export const VibeTipsMCPs: FC<VibeTipsMCPsProps> = ({ onOpenUrl }) => {
                 stars={mcp.stars}
                 tags={mcp.tags}
                 onClick={mcp.url ? () => onOpenUrl(mcp.url!) : undefined}
-                animationDelay={(catIdx * 4 + i + MCP_MARKETS.length) * 50}
+                animationDelay={(catIdx * 4 + i + mcpMarkets.length) * 50}
               />
             ))}
           </div>

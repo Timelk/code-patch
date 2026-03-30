@@ -1,7 +1,7 @@
 import { type FC, useState } from "react";
 import { VibeTipsCard } from "./VibeTipsCard";
-import { FRAMEWORKS, TIPS } from "../../data/vibetips-data";
 import { useI18n } from "../../i18n";
+import { useVibeTipsData } from "../../hooks/useVibeTipsData";
 
 interface VibeTipsHotsProps {
   readonly onOpenUrl: (url: string) => void;
@@ -9,9 +9,10 @@ interface VibeTipsHotsProps {
 
 export const VibeTipsHots: FC<VibeTipsHotsProps> = ({ onOpenUrl }) => {
   const { t } = useI18n();
+  const { frameworks, tips } = useVibeTipsData();
   const [expandedTip, setExpandedTip] = useState<number | null>(null);
 
-  const hero = FRAMEWORKS[0]; // Superpowers
+  const hero = frameworks[0]; // Superpowers
 
   return (
     <div className="space-y-6">
@@ -61,7 +62,7 @@ export const VibeTipsHots: FC<VibeTipsHotsProps> = ({ onOpenUrl }) => {
           {t("vt.tips")}
         </h3>
         <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
-          {TIPS.map((tip, i) => (
+          {tips.map((tip, i) => (
             <button
               key={tip.title}
               className="vibetips-card text-left rounded-lg p-3 transition-all duration-150 border"
@@ -101,7 +102,7 @@ export const VibeTipsHots: FC<VibeTipsHotsProps> = ({ onOpenUrl }) => {
           {t("vt.frameworks")}
         </h3>
         <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}>
-          {FRAMEWORKS.slice(1).map((fw, i) => (
+          {frameworks.slice(1).map((fw, i) => (
             <VibeTipsCard
               key={fw.name}
               title={fw.name}
@@ -109,7 +110,7 @@ export const VibeTipsHots: FC<VibeTipsHotsProps> = ({ onOpenUrl }) => {
               stars={fw.stars}
               icon={"\u{1F680}"}
               onClick={() => onOpenUrl(fw.url)}
-              animationDelay={(i + TIPS.length) * 50}
+              animationDelay={(i + tips.length) * 50}
             />
           ))}
         </div>
