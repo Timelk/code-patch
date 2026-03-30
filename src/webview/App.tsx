@@ -175,6 +175,12 @@ export const App: FC = () => {
           if (multiSelect) {
             setSelectedSkillNames(new Set());
           }
+
+          // Refresh skills list after sync
+          postMessage({
+            type: "skills:load",
+            payload: { scope, agentFilter },
+          });
           break;
         }
         case "skill:fileChanged":

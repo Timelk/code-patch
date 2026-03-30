@@ -51,8 +51,9 @@ function applyOverrides(
 }
 
 /**
- * Checks if an agent is installed by probing its global skills directory itself
- * (not the parent), reducing false positives.
+ * Checks if an agent is installed by probing its global skills directory
+ * or its parent directory (agents may not create the skills/ subdirectory
+ * until the user explicitly adds a skill).
  */
 async function isAgentInstalled(agent: AgentConfig): Promise<boolean> {
   if (agent.globalSkillsDir === null) {
@@ -65,7 +66,14 @@ async function isAgentInstalled(agent: AgentConfig): Promise<boolean> {
     await fs.promises.access(resolvedDir, fs.constants.F_OK);
     return true;
   } catch {
-    return false;
+    // skills/ dir doesn't exist — check parent (e.g. ~/.claude/)
+    const parentDir = path.dirname(resolvedDir);
+    try {
+      await fs.promises.access(parentDir, fs.constants.F_OK);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

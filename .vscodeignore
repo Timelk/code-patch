@@ -4,7 +4,7 @@ src/**
 node_modules/**
 .omc/**
 test/**
-*.png
+
 *.html
 vite.config.ts
 tsconfig*.json

@@ -64,8 +64,9 @@ export const zh: Record<string, string> = {
 
   // Confirm dialog
   "confirm.deleteOne": "删除技能",
-  "confirm.deleteMessageOne": "确定要删除 \"{name}\" 吗？此操作无法撤销。",
-  "confirm.deleteMessageMulti": "确定要删除以下 {count} 个技能吗？此操作无法撤销。",
+  "confirm.deleteMessageOne": '确定要删除 "{name}" 吗？此操作无法撤销。',
+  "confirm.deleteMessageMulti":
+    "确定要删除以下 {count} 个技能吗？此操作无法撤销。",
 
   // Settings
   "settings.title": "设置",
@@ -81,7 +82,7 @@ export const zh: Record<string, string> = {
   "settings.about": "关于",
   "settings.extension": "扩展",
   "settings.extensionDesc": "Vibe Rules — AI 代理技能管理器",
-  "settings.version": "v0.2.0",
+  "settings.version": "v0.2.6",
   "settings.syncEngine": "同步引擎",
   "settings.syncEngineDesc": "基于复制的同步，确保跨平台安全",
   "settings.openJson": "打开 JSON 设置",

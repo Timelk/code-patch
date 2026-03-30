@@ -28,6 +28,8 @@ Vibe Rules gives you a single dashboard to see all your skills across all agents
 - Diff preview — compare skill versions across agents before syncing
 - Sync history — track all past sync operations
 
+![Skill Management & Sync](skills.gif)
+
 **Skill Marketplace**
 - Browse skills from SkillHub, SkillsMP, and other online sources
 - Install remote skills directly to any agent
@@ -38,6 +40,8 @@ Vibe Rules gives you a single dashboard to see all your skills across all agents
 **VibeTips**
 - Curated vibe coding tips, hot frameworks, and featured skills/MCPs
 - Bilingual support (English / Chinese)
+
+![VibeTips](vibetips.gif)
 
 ## Supported Agents
 

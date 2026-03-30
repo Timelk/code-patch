@@ -100,8 +100,9 @@ export const VibeTipsCard: FC<VibeTipsCardProps> = ({
               key={tag}
               className="text-[9px] px-1.5 py-0.5 rounded-full font-medium"
               style={{
-                background: hasGradient ? "rgba(255,255,255,0.15)" : "var(--cp-badge-bg)",
-                color: hasGradient ? "rgba(255,255,255,0.9)" : "var(--cp-text-muted)",
+                background: hasGradient ? "rgba(255,255,255,0.15)" : "var(--cp-primary)",
+                color: hasGradient ? "rgba(255,255,255,0.9)" : "var(--cp-primary-fg)",
+                opacity: hasGradient ? 1 : 0.85,
               }}
             >
               {tag}

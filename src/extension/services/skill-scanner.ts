@@ -4,7 +4,7 @@ import matter from "gray-matter";
 import type { Skill, SkillFrontmatter } from "../types/skill";
 import type { AgentConfig } from "../types/agent";
 import { AGENT_REGISTRY } from "../types/agent";
-import { resolveSkillsDir } from "./agent-detector";
+import { resolveSkillsDir, resolveOwnSkillsDir } from "./agent-detector";
 
 /**
  * Parses a single SKILL.md file into a Skill object.
@@ -113,14 +113,22 @@ export async function scanSkills(
 
   for (const s of scopes) {
     for (const agent of agents) {
+      // Scan the agent's read directory (shared .agents/skills/ for universal agents)
       const dir = resolveSkillsDir(agent, s, workspaceRoot);
-      if (!dir || scannedDirs.has(dir)) {
-        continue;
+      if (dir && !scannedDirs.has(dir)) {
+        scannedDirs.add(dir);
+        const skills = await scanDirectory(dir, agent.name);
+        allSkills.push(...skills);
       }
-      scannedDirs.add(dir);
 
-      const skills = await scanDirectory(dir, agent.name);
-      allSkills.push(...skills);
+      // Also scan the agent's own directory (e.g. .copilot/skills/) —
+      // sync writes here, so it may contain skills not in the shared dir
+      const ownDir = resolveOwnSkillsDir(agent, s, workspaceRoot);
+      if (ownDir && !scannedDirs.has(ownDir)) {
+        scannedDirs.add(ownDir);
+        const skills = await scanDirectory(ownDir, agent.name);
+        allSkills.push(...skills);
+      }
     }
   }
 

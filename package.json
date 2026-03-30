@@ -2,7 +2,7 @@
   "name": "viberules",
   "displayName": "Vibe Rules",
   "description": "Unified skill manager for AI coding agents — sync skills across Claude Code, Codex, OpenCode, Cursor and more.",
-  "version": "0.2.0",
+  "version": "0.2.7",
   "publisher": "VibeRules",
   "license": "MIT",
   "icon": "icon.png",
@@ -70,26 +70,26 @@
               }
             }
           }
+        },
+        "vibeRules.language": {
+          "type": "string",
+          "enum": [
+            "en",
+            "zh"
+          ],
+          "default": "en",
+          "description": "Interface display language (English / 中文)."
         }
-      },
-      "vibeRules.language": {
-        "type": "string",
-        "enum": [
-          "en",
-          "zh"
-        ],
-        "default": "en",
-        "description": "Interface display language (English / 中文)."
       }
     }
   },
   "scripts": {
     "vscode:prepublish": "npm run build",
     "build": "npm run build:extension && npm run build:webview",
-    "build:extension": "tsc -p tsconfig.extension.json",
+    "build:extension": "esbuild src/extension/extension.ts --bundle --outfile=dist/extension/extension.js --external:vscode --format=cjs --platform=node --target=es2022 --sourcemap",
     "build:webview": "vite build",
     "dev:webview": "vite",
-    "watch:extension": "tsc -p tsconfig.extension.json --watch",
+    "watch:extension": "esbuild src/extension/extension.ts --bundle --outfile=dist/extension/extension.js --external:vscode --format=cjs --platform=node --target=es2022 --sourcemap --watch",
     "lint": "eslint src/",
     "package": "vsce package"
   },
@@ -100,6 +100,7 @@
     "@types/vscode": "^1.85.0",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.17",
+    "esbuild": "^0.27.4",
     "postcss": "^8.4.33",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3",
