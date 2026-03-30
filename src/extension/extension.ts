@@ -9,13 +9,13 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // Open dashboard as an editor tab
   context.subscriptions.push(
-    vscode.commands.registerCommand("codePatch.openDashboard", () => {
+    vscode.commands.registerCommand("viberules.openDashboard", () => {
       DashboardPanel.createOrShow(context.extensionUri, fileWatcher!);
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("codePatch.refreshSkills", () => {
+    vscode.commands.registerCommand("viberules.refreshSkills", () => {
       vscode.commands.executeCommand(
         "workbench.action.webview.reloadWebviewAction"
       );
@@ -23,7 +23,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("codePatch.syncSkill", () => {
+    vscode.commands.registerCommand("viberules.syncSkill", () => {
       // Open dashboard first, then user can sync from there
       DashboardPanel.createOrShow(context.extensionUri, fileWatcher!);
     })

@@ -12,7 +12,7 @@ export interface SyncHistoryEntry {
   readonly timestamp: number;
 }
 
-const HISTORY_FILE = path.join(os.homedir(), ".code-patch", "sync-history.json");
+const HISTORY_FILE = path.join(os.homedir(), ".vibe-rules", "sync-history.json");
 const MAX_ENTRIES = 100;
 
 /**

@@ -30,7 +30,7 @@ function resolvePath(template: string): string {
  * Reads per-agent settings overrides from VSCode configuration.
  */
 function getAgentSettings(): Record<string, AgentSettingsOverride> {
-  const config = vscode.workspace.getConfiguration("codePatch");
+  const config = vscode.workspace.getConfiguration("vibeRules");
   return (config.get<Record<string, AgentSettingsOverride>>("agents") ?? {});
 }
 

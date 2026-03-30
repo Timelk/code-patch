@@ -41,7 +41,7 @@ async function parseSkillFile(
       metadata: (frontmatter.metadata as Record<string, unknown>) || {},
     };
   } catch (error) {
-    console.error(`[code-patch] Failed to parse skill file ${filePath}:`, error);
+    console.error(`[vibe-rules] Failed to parse skill file ${filePath}:`, error);
     return null;
   }
 }

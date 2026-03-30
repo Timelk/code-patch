@@ -49,10 +49,10 @@ async function isPathInsideSkillsDirs(
 }
 
 /**
- * Manages a Code Patch dashboard as an editor tab (WebviewPanel).
+ * Manages a Vibe Rules dashboard as an editor tab (WebviewPanel).
  */
 export class DashboardPanel {
-  public static readonly viewType = "codePatch.dashboard";
+  public static readonly viewType = "viberules.dashboard";
 
   private static instance: DashboardPanel | undefined;
   private readonly panel: vscode.WebviewPanel;
@@ -112,7 +112,7 @@ export class DashboardPanel {
     // Create a new panel in the editor area
     const panel = vscode.window.createWebviewPanel(
       DashboardPanel.viewType,
-      "Code Patch",
+      "Vibe Rules",
       vscode.ViewColumn.One,
       {
         enableScripts: true,
@@ -422,7 +422,7 @@ export class DashboardPanel {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource};">
   <link rel="stylesheet" href="${styleUri}">
-  <title>Code Patch</title>
+  <title>Vibe Rules</title>
 </head>
 <body>
   <div id="root"></div>
