@@ -1,7 +1,7 @@
 // Chinese locale strings
 export const zh: Record<string, string> = {
   // App
-  "app.title": "code patch",
+  "app.title": "vibe rules",
 
   // Header
   "header.refresh": "刷新技能",
@@ -80,7 +80,7 @@ export const zh: Record<string, string> = {
   "settings.activeAgentsDesc": "本机检测到的代理数量",
   "settings.about": "关于",
   "settings.extension": "扩展",
-  "settings.extensionDesc": "Code Patch — AI 代理技能管理器",
+  "settings.extensionDesc": "Vibe Rules — AI 代理技能管理器",
   "settings.version": "v0.2.0",
   "settings.syncEngine": "同步引擎",
   "settings.syncEngineDesc": "基于复制的同步，确保跨平台安全",

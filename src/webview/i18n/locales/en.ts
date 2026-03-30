@@ -1,7 +1,7 @@
 // English locale strings
 export const en: Record<string, string> = {
   // App
-  "app.title": "code patch",
+  "app.title": "vibe rules",
 
   // Header
   "header.refresh": "Refresh skills",
@@ -80,7 +80,7 @@ export const en: Record<string, string> = {
   "settings.activeAgentsDesc": "Number of agents detected on this machine",
   "settings.about": "About",
   "settings.extension": "Extension",
-  "settings.extensionDesc": "Code Patch — AI agent skill manager",
+  "settings.extensionDesc": "Vibe Rules — AI agent skill manager",
   "settings.version": "v0.2.0",
   "settings.syncEngine": "Sync Engine",
   "settings.syncEngineDesc": "Copy-based sync for cross-platform safety",
