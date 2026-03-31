@@ -2,7 +2,7 @@
   "name": "viberules",
   "displayName": "Vibe Rules",
   "description": "Unified skill manager for AI coding agents — sync skills across Claude Code, Codex, OpenCode, Cursor and more.",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "publisher": "VibeRules",
   "license": "MIT",
   "icon": "icon.png",

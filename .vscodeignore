@@ -10,3 +10,5 @@ vite.config.ts
 tsconfig*.json
 tailwind.config.cjs
 postcss.config.cjs
+*.gif
+TOKEN.md
